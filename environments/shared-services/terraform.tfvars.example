@@ -1,0 +1,16 @@
+# SharedServices account configuration
+# Copy this to terraform.tfvars and fill in your values
+
+aws_profile  = "shared-services"
+aws_region   = "us-west-1"
+
+# Your domain name (managed by Route 53)
+domain_name = "example.com"
+
+# State backend bucket name (must be globally unique)
+state_bucket_name    = "your-org-tofu-state"
+state_lock_table_name = "your-org-tofu-locks"
+
+# Account IDs (for cross-account access)
+test_account_id = "222222222222"
+prod_account_id = "333333333333"

@@ -1,0 +1,21 @@
+# Production environment configuration
+# Copy this to terraform.tfvars and fill in your values
+
+aws_profile = "prod"
+aws_region  = "us-west-1"
+
+environment = "prod"
+
+# VPC
+vpc_cidr            = "10.1.0.0/16"
+availability_zones  = ["us-west-1a", "us-west-1b"]
+
+# EKS
+cluster_name       = "app-prod"
+kubernetes_version = "1.31"
+
+# Domain
+domain_name = "example.com"
+
+# SharedServices account ID (for state backend and Route 53 access)
+shared_services_account_id = "111111111111"

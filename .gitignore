@@ -1,0 +1,24 @@
+# OpenTofu
+*.tfstate
+*.tfstate.backup
+*.tfstate.*.backup
+.terraform/
+.terraform.lock.hcl
+*.tfplan
+crash.log
+crash.*.log
+
+# Actual tfvars (contain account-specific values)
+terraform.tfvars
+
+# Keep the example files
+!terraform.tfvars.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
