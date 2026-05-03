@@ -1,16 +1,15 @@
 {
   "name": "Infrastructure Dev Environment",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
-
   "features": {
     "ghcr.io/devcontainers/features/aws-cli:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1.0": {},
     "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
       "helm": "latest",
       "minikube": "none"
     }
   },
-
   "customizations": {
     "vscode": {
       "settings": {
@@ -28,10 +27,9 @@
       ]
     }
   },
-
   "postCreateCommand": "bash .devcontainer/post-create.sh",
-
   "mounts": [
-    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached"
+    "source=${localEnv:HOME}/.aws,target=/home/vscode/.aws,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.claude,target=/home/vscode/.claude,type=bind,consistency=cached"
   ]
 }
