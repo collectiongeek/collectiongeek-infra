@@ -168,6 +168,130 @@ resource "aws_iam_role_policy" "state_access" {
 }
 
 # =============================================================================
+# Cross-Account IAM Role for Route 53 DNS Management
+# =============================================================================
+
+# This role is assumed by external-dns running in the Test and Prod clusters
+# via IRSA (IAM Roles for Service Accounts). The trust policy will be updated
+# in later phases to include the OIDC provider ARNs from each EKS cluster.
+# For now, we allow account-level trust.
+
+resource "aws_iam_role" "dns_manager" {
+  name = "route53-dns-manager"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCrossAccountAssume"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            "arn:aws:iam::${var.test_account_id}:root",
+            "arn:aws:iam::${var.prod_account_id}:root"
+          ]
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "dns_manager" {
+  name = "route53-dns-manager-policy"
+  role = aws_iam_role.dns_manager.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowRoute53RecordChanges"
+        Effect = "Allow"
+        Action = [
+          "route53:ChangeResourceRecordSets"
+        ]
+        Resource = "arn:aws:route53:::hostedzone/${aws_route53_zone.main.zone_id}"
+      },
+      {
+        Sid    = "AllowRoute53ReadOperations"
+        Effect = "Allow"
+        Action = [
+          "route53:ListHostedZones",
+          "route53:ListResourceRecordSets",
+          "route53:ListHostedZonesByName"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# =============================================================================
+# Cross-Account IAM Role for cert-manager DNS-01 Challenge
+# =============================================================================
+
+# cert-manager uses DNS-01 challenges to verify domain ownership for TLS certs.
+# It needs to create TXT records in Route 53, similar to external-dns.
+
+resource "aws_iam_role" "cert_manager" {
+  name = "route53-cert-manager"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowCrossAccountAssume"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            "arn:aws:iam::${var.test_account_id}:root",
+            "arn:aws:iam::${var.prod_account_id}:root"
+          ]
+        }
+        Action = "sts:AssumeRole"
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "cert_manager" {
+  name = "route53-cert-manager-policy"
+  role = aws_iam_role.cert_manager.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "AllowRoute53CertValidation"
+        Effect = "Allow"
+        Action = [
+          "route53:ChangeResourceRecordSets"
+        ]
+        Resource = "arn:aws:route53:::hostedzone/${aws_route53_zone.main.zone_id}"
+      },
+      {
+        Sid    = "AllowRoute53GetChange"
+        Effect = "Allow"
+        Action = [
+          "route53:GetChange"
+        ]
+        Resource = "arn:aws:route53:::change/*"
+      },
+      {
+        Sid    = "AllowRoute53ListZones"
+        Effect = "Allow"
+        Action = [
+          "route53:ListHostedZones",
+          "route53:ListHostedZonesByName",
+          "route53:ListResourceRecordSets"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# =============================================================================
 # Route 53 Hosted Zone (will be fully configured in Phase 3)
 # =============================================================================
 

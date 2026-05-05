@@ -33,4 +33,14 @@ output "shared_services_account_id" {
   value       = data.aws_caller_identity.current.account_id
 }
 
+output "dns_manager_role_arn" {
+  description = "IAM role ARN for external-dns cross-account Route 53 access"
+  value       = aws_iam_role.dns_manager.arn
+}
+
+output "cert_manager_role_arn" {
+  description = "IAM role ARN for cert-manager cross-account Route 53 access"
+  value       = aws_iam_role.cert_manager.arn
+}
+
 data "aws_caller_identity" "current" {}
