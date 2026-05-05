@@ -19,3 +19,8 @@ domain_name = "example.com"
 
 # SharedServices account ID (for state backend and Route 53 access)
 shared_services_account_id = "111111111111"
+
+# Route 53 / DNS (from SharedServices tofu outputs)
+route53_zone_id       = "Z1234567890ABC"
+dns_manager_role_arn  = "arn:aws:iam::111111111111:role/route53-dns-manager"
+cert_manager_role_arn = "arn:aws:iam::111111111111:role/route53-cert-manager"

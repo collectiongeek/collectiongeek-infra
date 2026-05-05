@@ -72,5 +72,21 @@ module "karpenter" {
 }
 
 # =============================================================================
-# Cluster Add-ons will be added in Phase 6
+# Cluster Add-ons (Ingress, cert-manager, external-dns)
 # =============================================================================
+
+module "cluster_addons" {
+  source = "../../modules/cluster-addons"
+
+  environment              = var.environment
+  cluster_name             = module.eks.cluster_name
+  cluster_oidc_provider_arn = module.eks.cluster_oidc_provider_arn
+  cluster_oidc_issuer_url  = module.eks.cluster_oidc_issuer_url
+  domain_name              = var.domain_name
+  route53_zone_id          = var.route53_zone_id
+  dns_manager_role_arn     = var.dns_manager_role_arn
+  cert_manager_role_arn    = var.cert_manager_role_arn
+  shared_services_account_id = var.shared_services_account_id
+
+  depends_on = [module.karpenter]
+}

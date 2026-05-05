@@ -43,3 +43,18 @@ variable "shared_services_account_id" {
   description = "AWS account ID for SharedServices (used for cross-account access)"
   type        = string
 }
+
+variable "route53_zone_id" {
+  description = "Route 53 hosted zone ID (from SharedServices)"
+  type        = string
+}
+
+variable "dns_manager_role_arn" {
+  description = "IAM role ARN for external-dns Route 53 access (from SharedServices)"
+  type        = string
+}
+
+variable "cert_manager_role_arn" {
+  description = "IAM role ARN for cert-manager Route 53 access (from SharedServices)"
+  type        = string
+}
