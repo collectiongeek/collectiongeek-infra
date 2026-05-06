@@ -58,3 +58,15 @@ variable "cert_manager_role_arn" {
   description = "IAM role ARN for cert-manager Route 53 access (from SharedServices)"
   type        = string
 }
+
+variable "gitops_repo_url" {
+  description = "GitOps repository URL"
+  type        = string
+}
+
+variable "slack_webhook_url" {
+  description = "Slack webhook URL for Argo CD notifications (optional)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}

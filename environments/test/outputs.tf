@@ -39,3 +39,8 @@ output "cluster_oidc_issuer_url" {
   description = "OIDC issuer URL (without https://)"
   value       = module.eks.cluster_oidc_issuer_url
 }
+
+output "argocd_url" {
+  description = "Argo CD UI URL"
+  value       = module.argocd.argocd_url
+}

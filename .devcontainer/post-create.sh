@@ -32,6 +32,11 @@ curl -fsSL -o /tmp/tfsec https://github.com/aquasecurity/tfsec/releases/latest/d
 sudo install -o root -g root -m 0755 /tmp/tfsec /usr/local/bin/tfsec
 rm /tmp/tfsec
 
+echo "==> Installing Argo CD CLI..."
+curl -sSL -o argocd https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+chmod +x argocd
+sudo mv argocd /usr/local/bin/
+
 echo ""
 echo "==> Tool versions:"
 echo "  OpenTofu:  $(tofu --version | head -1)"
@@ -40,5 +45,11 @@ echo "  kubectl:   $(kubectl version --client --short 2>/dev/null || kubectl ver
 echo "  Helm:      $(helm version --short)"
 echo "  tflint:    $(tflint --version)"
 echo "  tfsec:     $(tfsec --version 2>/dev/null || echo 'installed')"
+echo "  argocd:    $(argocd version --client --short 2>/dev/null || echo 'installed')"
 echo ""
 echo "==> Done! Infrastructure dev environment is ready."
+echo ""
+echo "If this is your first time, run the kubeconfig setup:"
+echo "  aws sso login --profile test"
+echo "  aws eks update-kubeconfig --name app-test --region us-west-1 --profile test --alias app-test"
+echo "  aws eks update-kubeconfig --name app-prod --region us-west-1 --profile prod --alias app-prod"

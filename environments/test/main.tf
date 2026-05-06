@@ -90,3 +90,19 @@ module "cluster_addons" {
 
   depends_on = [module.karpenter]
 }
+
+# =============================================================================
+# Argo CD
+# =============================================================================
+
+module "argocd" {
+  source = "../../modules/argocd"
+
+  environment        = var.environment
+  domain_name        = var.domain_name
+  cluster_issuer     = "letsencrypt-prod"
+  gitops_repo_url    = var.gitops_repo_url
+  slack_webhook_url  = var.slack_webhook_url
+
+  depends_on = [module.cluster_addons]
+}

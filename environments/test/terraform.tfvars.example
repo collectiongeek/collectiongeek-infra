@@ -24,3 +24,7 @@ shared_services_account_id = "111111111111"
 route53_zone_id       = "Z1234567890ABC"
 dns_manager_role_arn  = "arn:aws:iam::111111111111:role/route53-dns-manager"
 cert_manager_role_arn = "arn:aws:iam::111111111111:role/route53-cert-manager"
+
+# Argo CD
+gitops_repo_url   = "https://github.com/<your-github-username>/gitops-repo.git"
+slack_webhook_url = ""  # Optional: Slack webhook for deploy notifications
