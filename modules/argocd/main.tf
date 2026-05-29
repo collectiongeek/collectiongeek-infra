@@ -4,6 +4,15 @@
 
 locals {
   argocd_host = var.environment == "prod" ? "argocd.${var.domain_name}" : "argocd.${var.environment}.${var.domain_name}"
+
+  # How to enable insecure server mode depends on the chart major version:
+  #   chart < 8.x : the `--insecure` server arg
+  #   chart >= 8.x: configs.params "server.insecure" (the chart derives the
+  #                 server port from this param; the arg is ignored)
+  # Keying off the chart version keeps each environment byte-identical until its
+  # own chart version is deliberately bumped.
+  argocd_chart_major         = tonumber(split(".", var.argocd_chart_version)[0])
+  argocd_insecure_via_params = local.argocd_chart_major >= 8
 }
 
 # =============================================================================
@@ -48,10 +57,32 @@ resource "helm_release" "argocd" {
     value = "true"
   }
 
-  # Run Argo CD server in insecure mode (TLS terminated at ingress)
-  set {
-    name  = "server.extraArgs[0]"
-    value = "--insecure"
+  # Run Argo CD server in insecure mode (TLS terminated at ingress).
+  # Mechanism is chart-version dependent — see local.argocd_insecure_via_params.
+  dynamic "set" {
+    for_each = local.argocd_insecure_via_params ? [] : [1]
+    content {
+      name  = "server.extraArgs[0]"
+      value = "--insecure"
+    }
+  }
+  dynamic "set" {
+    for_each = local.argocd_insecure_via_params ? [1] : []
+    content {
+      name  = "configs.params.server\\.insecure"
+      value = "true"
+    }
+  }
+
+  # Pin the resource tracking method when set. The app default flips from
+  # "label" (2.x) to "annotation" (3.x); pinning avoids a silent change to how
+  # live resources are tracked during a chart-major upgrade. Null = app default.
+  dynamic "set" {
+    for_each = var.resource_tracking_method == null ? [] : [var.resource_tracking_method]
+    content {
+      name  = "configs.cm.application\\.resourceTrackingMethod"
+      value = set.value
+    }
   }
 
   # Tolerate system node taint for all components

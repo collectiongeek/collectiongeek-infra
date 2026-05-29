@@ -47,7 +47,7 @@ variable "karpenter_version" {
 variable "instance_types" {
   description = "Allowed EC2 instance types for Karpenter"
   type        = list(string)
-  default     = [
+  default = [
     "t3.medium",
     "t3.large",
     "m6i.large",
@@ -73,4 +73,16 @@ variable "memory_limit" {
   description = "Maximum total memory (Gi) Karpenter can provision"
   type        = string
   default     = "40Gi"
+}
+
+variable "replicas" {
+  description = <<-EOT
+    Number of Karpenter controller replicas. Karpenter runs only on system nodes
+    (it is barred from its own nodes by nodeAffinity) and requires one pod per
+    host, so this must not exceed the number of system nodes. Use 1 on
+    single-system-node clusters; with replicas = 1 the deployment also rolls with
+    maxSurge = 0 so an upgrade frees the node before scheduling the new pod.
+  EOT
+  type        = number
+  default     = 2
 }

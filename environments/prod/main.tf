@@ -26,7 +26,7 @@ module "vpc" {
   public_subnet_cidrs  = local.public_subnet_cidrs
   private_subnet_cidrs = local.private_subnet_cidrs
   cluster_name         = var.cluster_name
-  single_nat_gateway   = false  # One NAT Gateway per AZ for HA
+  single_nat_gateway   = false # One NAT Gateway per AZ for HA
 }
 
 # =============================================================================
@@ -44,7 +44,7 @@ module "eks" {
   public_subnet_ids  = module.vpc.public_subnet_ids
 
   system_node_instance_types = ["t3.medium"]
-  system_node_desired_size   = 2    # 2 system nodes for HA
+  system_node_desired_size   = 2 # 2 system nodes for HA
   system_node_min_size       = 2
   system_node_max_size       = 3
 }
@@ -65,9 +65,13 @@ module "karpenter" {
   private_subnet_ids        = module.vpc.private_subnet_ids
   cluster_security_group_id = module.eks.cluster_security_group_id
 
+  # Pinned explicitly so module-default changes never move prod implicitly.
+  # Promote only after validation in test (apply test before prod).
+  karpenter_version = "1.12.1"
+
   instance_types = ["t3.medium", "t3.large", "m6i.large", "m6a.large", "c6i.large", "c6a.large"]
-  capacity_type  = ["on-demand", "spot"]  # On-demand first for prod stability
-  cpu_limit      = "40"                   # Double the test limit
+  capacity_type  = ["on-demand", "spot"] # On-demand first for prod stability
+  cpu_limit      = "40"                  # Double the test limit
   memory_limit   = "80Gi"
 }
 
@@ -78,14 +82,14 @@ module "karpenter" {
 module "cluster_addons" {
   source = "../../modules/cluster-addons"
 
-  environment              = var.environment
-  cluster_name             = module.eks.cluster_name
-  cluster_oidc_provider_arn = module.eks.cluster_oidc_provider_arn
-  cluster_oidc_issuer_url  = module.eks.cluster_oidc_issuer_url
-  domain_name              = var.domain_name
-  route53_zone_id          = var.route53_zone_id
-  dns_manager_role_arn     = var.dns_manager_role_arn
-  cert_manager_role_arn    = var.cert_manager_role_arn
+  environment                = var.environment
+  cluster_name               = module.eks.cluster_name
+  cluster_oidc_provider_arn  = module.eks.cluster_oidc_provider_arn
+  cluster_oidc_issuer_url    = module.eks.cluster_oidc_issuer_url
+  domain_name                = var.domain_name
+  route53_zone_id            = var.route53_zone_id
+  dns_manager_role_arn       = var.dns_manager_role_arn
+  cert_manager_role_arn      = var.cert_manager_role_arn
   shared_services_account_id = var.shared_services_account_id
 
   depends_on = [module.karpenter]
@@ -98,11 +102,21 @@ module "cluster_addons" {
 module "argocd" {
   source = "../../modules/argocd"
 
-  environment        = var.environment
-  domain_name        = var.domain_name
-  cluster_issuer     = "letsencrypt-prod"
-  gitops_repo_url    = var.gitops_repo_url
-  slack_webhook_url  = var.slack_webhook_url
+  environment       = var.environment
+  domain_name       = var.domain_name
+  cluster_issuer    = "letsencrypt-prod"
+  gitops_repo_url   = var.gitops_repo_url
+  slack_webhook_url = var.slack_webhook_url
+
+  # Pinned explicitly so module-default changes never move prod implicitly.
+  # Promote only after validation in test (apply test before prod).
+  # NOTE: 7.x -> 9.x crosses two chart majors (Argo CD 2.x -> 3.x). The
+  # server.insecure mechanism switches automatically (see modules/argocd).
+  argocd_chart_version = "9.5.16"
+
+  # Keep 2.x tracking behavior across the 3.x upgrade; migrate to "annotation"
+  # later as its own change once 3.x is confirmed healthy.
+  resource_tracking_method = "label"
 
   depends_on = [module.cluster_addons]
 }

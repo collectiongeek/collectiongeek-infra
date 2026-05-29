@@ -64,9 +64,9 @@ resource "aws_iam_role_policy" "karpenter_controller" {
         Resource = "*"
       },
       {
-        Sid    = "IAMPassRole"
-        Effect = "Allow"
-        Action = "iam:PassRole"
+        Sid      = "IAMPassRole"
+        Effect   = "Allow"
+        Action   = "iam:PassRole"
         Resource = var.node_role_arn
       },
       {
@@ -147,6 +147,31 @@ resource "helm_release" "karpenter" {
   set {
     name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
     value = aws_iam_role.karpenter_controller.arn
+  }
+
+  set {
+    name  = "replicas"
+    value = tostring(var.replicas)
+  }
+
+  # On a single replica (single system node), remove the old controller pod
+  # before creating the new one. Karpenter's hard nodeAffinity keeps it off its
+  # own nodes, so a default rolling-update surge pod has no host to land on and
+  # the upgrade hangs ("context deadline exceeded"). maxSurge = 0 frees the node
+  # first. Multi-replica clusters keep the chart's default rolling strategy.
+  dynamic "set" {
+    for_each = var.replicas <= 1 ? [1] : []
+    content {
+      name  = "strategy.rollingUpdate.maxSurge"
+      value = "0"
+    }
+  }
+  dynamic "set" {
+    for_each = var.replicas <= 1 ? [1] : []
+    content {
+      name  = "strategy.rollingUpdate.maxUnavailable"
+      value = "1"
+    }
   }
 
   # Tolerate the system node taint so Karpenter runs on system nodes

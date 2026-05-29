@@ -31,3 +31,19 @@ variable "gitops_repo_url" {
   description = "GitOps repository URL"
   type        = string
 }
+
+variable "resource_tracking_method" {
+  description = <<-EOT
+    Argo CD resource tracking method. Null (default) uses the application
+    default, which is "label" in Argo CD 2.x and "annotation" in 3.x. Pin to
+    "label" across a 2.x -> 3.x upgrade to keep tracking behavior unchanged,
+    then migrate to "annotation" deliberately as a separate change.
+  EOT
+  type        = string
+  default     = null
+
+  validation {
+    condition     = var.resource_tracking_method == null || contains(["label", "annotation", "annotation+label"], var.resource_tracking_method)
+    error_message = "resource_tracking_method must be one of: label, annotation, annotation+label (or null)."
+  }
+}
