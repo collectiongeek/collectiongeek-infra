@@ -17,49 +17,48 @@ resource "helm_release" "ingress_nginx" {
   version          = "4.12.0"
   create_namespace = true
 
-  # Use NLB (Network Load Balancer) instead of CLB
-  set {
-    name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type"
-    value = "nlb"
-  }
-  set {
-    name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-scheme"
-    value = "internet-facing"
-  }
-  set {
-    name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-cross-zone-load-balancing-enabled"
-    value = "true"
-  }
-
-  # Resource requests for Karpenter scheduling
-  set {
-    name  = "controller.resources.requests.cpu"
-    value = "100m"
-  }
-  set {
-    name  = "controller.resources.requests.memory"
-    value = "128Mi"
-  }
-
-  # Tolerate system node taint so it can run on system nodes too
-  set {
-    name  = "controller.tolerations[0].key"
-    value = "CriticalAddonsOnly"
-  }
-  set {
-    name  = "controller.tolerations[0].operator"
-    value = "Exists"
-  }
-  set {
-    name  = "controller.tolerations[0].effect"
-    value = "NoSchedule"
-  }
-
-  # Replica count
-  set {
-    name  = "controller.replicaCount"
-    value = var.environment == "prod" ? "2" : "1"
-  }
+  set = [
+    # Use NLB (Network Load Balancer) instead of CLB
+    {
+      name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type"
+      value = "nlb"
+    },
+    {
+      name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-scheme"
+      value = "internet-facing"
+    },
+    {
+      name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-cross-zone-load-balancing-enabled"
+      value = "true"
+    },
+    # Resource requests for Karpenter scheduling
+    {
+      name  = "controller.resources.requests.cpu"
+      value = "100m"
+    },
+    {
+      name  = "controller.resources.requests.memory"
+      value = "128Mi"
+    },
+    # Tolerate system node taint so it can run on system nodes too
+    {
+      name  = "controller.tolerations[0].key"
+      value = "CriticalAddonsOnly"
+    },
+    {
+      name  = "controller.tolerations[0].operator"
+      value = "Exists"
+    },
+    {
+      name  = "controller.tolerations[0].effect"
+      value = "NoSchedule"
+    },
+    # Replica count
+    {
+      name  = "controller.replicaCount"
+      value = var.environment == "prod" ? "2" : "1"
+    },
+  ]
 }
 
 # =============================================================================
@@ -115,41 +114,40 @@ resource "helm_release" "cert_manager" {
   version          = "1.17.1"
   create_namespace = true
 
-  # Install CRDs
-  set {
-    name  = "crds.enabled"
-    value = "true"
-  }
-
-  # IRSA annotation
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = aws_iam_role.cert_manager.arn
-  }
-
-  # Resource requests
-  set {
-    name  = "resources.requests.cpu"
-    value = "50m"
-  }
-  set {
-    name  = "resources.requests.memory"
-    value = "64Mi"
-  }
-
-  # Tolerate system node taint
-  set {
-    name  = "tolerations[0].key"
-    value = "CriticalAddonsOnly"
-  }
-  set {
-    name  = "tolerations[0].operator"
-    value = "Exists"
-  }
-  set {
-    name  = "tolerations[0].effect"
-    value = "NoSchedule"
-  }
+  set = [
+    # Install CRDs
+    {
+      name  = "crds.enabled"
+      value = "true"
+    },
+    # IRSA annotation
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = aws_iam_role.cert_manager.arn
+    },
+    # Resource requests
+    {
+      name  = "resources.requests.cpu"
+      value = "50m"
+    },
+    {
+      name  = "resources.requests.memory"
+      value = "64Mi"
+    },
+    # Tolerate system node taint
+    {
+      name  = "tolerations[0].key"
+      value = "CriticalAddonsOnly"
+    },
+    {
+      name  = "tolerations[0].operator"
+      value = "Exists"
+    },
+    {
+      name  = "tolerations[0].effect"
+      value = "NoSchedule"
+    },
+  ]
 }
 
 # ClusterIssuer for Let's Encrypt (production)
@@ -270,73 +268,67 @@ resource "helm_release" "external_dns" {
   version          = "1.15.1"
   create_namespace = true
 
-  # AWS provider configuration
-  set {
-    name  = "provider.name"
-    value = "aws"
-  }
-
-  # Use the cross-account role for Route 53 access
-  set {
-    name  = "extraArgs[0]"
-    value = "--aws-assume-role=${var.dns_manager_role_arn}"
-  }
-
-  # Only manage records for our domain
-  set {
-    name  = "domainFilters[0]"
-    value = var.domain_name
-  }
-
-  # TXT record ownership to prevent conflicts between environments
-  set {
-    name  = "txtOwnerId"
-    value = var.cluster_name
-  }
-
-  # Policy: sync creates and deletes records (vs. upsert-only)
-  set {
-    name  = "policy"
-    value = "sync"
-  }
-
-  # Watch Ingress resources
-  set {
-    name  = "sources[0]"
-    value = "ingress"
-  }
-  set {
-    name  = "sources[1]"
-    value = "service"
-  }
-
-  # IRSA annotation
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = aws_iam_role.external_dns.arn
-  }
-
-  # Resource requests
-  set {
-    name  = "resources.requests.cpu"
-    value = "50m"
-  }
-  set {
-    name  = "resources.requests.memory"
-    value = "64Mi"
-  }
-
-  # Tolerate system node taint
-  set {
-    name  = "tolerations[0].key"
-    value = "CriticalAddonsOnly"
-  }
-  set {
-    name  = "tolerations[0].operator"
-    value = "Exists"
-  }
-  set {
-    name  = "tolerations[0].effect"
-    value = "NoSchedule"
-  }
+  set = [
+    # AWS provider configuration
+    {
+      name  = "provider.name"
+      value = "aws"
+    },
+    # Use the cross-account role for Route 53 access
+    {
+      name  = "extraArgs[0]"
+      value = "--aws-assume-role=${var.dns_manager_role_arn}"
+    },
+    # Only manage records for our domain
+    {
+      name  = "domainFilters[0]"
+      value = var.domain_name
+    },
+    # TXT record ownership to prevent conflicts between environments
+    {
+      name  = "txtOwnerId"
+      value = var.cluster_name
+    },
+    # Policy: sync creates and deletes records (vs. upsert-only)
+    {
+      name  = "policy"
+      value = "sync"
+    },
+    # Watch Ingress resources
+    {
+      name  = "sources[0]"
+      value = "ingress"
+    },
+    {
+      name  = "sources[1]"
+      value = "service"
+    },
+    # IRSA annotation
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = aws_iam_role.external_dns.arn
+    },
+    # Resource requests
+    {
+      name  = "resources.requests.cpu"
+      value = "50m"
+    },
+    {
+      name  = "resources.requests.memory"
+      value = "64Mi"
+    },
+    # Tolerate system node taint
+    {
+      name  = "tolerations[0].key"
+      value = "CriticalAddonsOnly"
+    },
+    {
+      name  = "tolerations[0].operator"
+      value = "Exists"
+    },
+    {
+      name  = "tolerations[0].effect"
+      value = "NoSchedule"
+    },
+  ]
 }

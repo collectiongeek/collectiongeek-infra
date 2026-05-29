@@ -134,69 +134,68 @@ resource "helm_release" "karpenter" {
   version          = var.karpenter_version
   create_namespace = false
 
-  set {
-    name  = "settings.clusterName"
-    value = var.cluster_name
-  }
-
-  set {
-    name  = "settings.clusterEndpoint"
-    value = var.cluster_endpoint
-  }
-
-  set {
-    name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
-    value = aws_iam_role.karpenter_controller.arn
-  }
-
-  set {
-    name  = "replicas"
-    value = tostring(var.replicas)
-  }
-
-  # On a single replica (single system node), remove the old controller pod
-  # before creating the new one. Karpenter's hard nodeAffinity keeps it off its
-  # own nodes, so a default rolling-update surge pod has no host to land on and
-  # the upgrade hangs ("context deadline exceeded"). maxSurge = 0 frees the node
-  # first. Multi-replica clusters keep the chart's default rolling strategy.
-  dynamic "set" {
-    for_each = var.replicas <= 1 ? [1] : []
-    content {
-      name  = "strategy.rollingUpdate.maxSurge"
-      value = "0"
-    }
-  }
-  dynamic "set" {
-    for_each = var.replicas <= 1 ? [1] : []
-    content {
-      name  = "strategy.rollingUpdate.maxUnavailable"
-      value = "1"
-    }
-  }
-
-  # Tolerate the system node taint so Karpenter runs on system nodes
-  set {
-    name  = "tolerations[0].key"
-    value = "CriticalAddonsOnly"
-  }
-  set {
-    name  = "tolerations[0].operator"
-    value = "Exists"
-  }
-  set {
-    name  = "tolerations[0].effect"
-    value = "NoSchedule"
-  }
-
-  # Resource requests to ensure Karpenter gets scheduled
-  set {
-    name  = "resources.requests.cpu"
-    value = "100m"
-  }
-  set {
-    name  = "resources.requests.memory"
-    value = "256Mi"
-  }
+  # v2 stored `set` as an unordered set; the v3 ordered-list attribute makes the
+  # first plan show a one-time reorder of these entries (state is alphabetical)
+  # plus new v3 schema attributes. Helm renders identical values either way, so
+  # the apply bumps the release revision without changing any workload.
+  set = concat([
+    {
+      name  = "settings.clusterName"
+      value = var.cluster_name
+    },
+    {
+      name  = "settings.clusterEndpoint"
+      value = var.cluster_endpoint
+    },
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = aws_iam_role.karpenter_controller.arn
+    },
+    {
+      name  = "replicas"
+      value = tostring(var.replicas)
+    },
+    ],
+    # On a single replica (single system node), remove the old controller pod
+    # before creating the new one. Karpenter's hard nodeAffinity keeps it off its
+    # own nodes, so a default rolling-update surge pod has no host to land on and
+    # the upgrade hangs ("context deadline exceeded"). maxSurge = 0 frees the node
+    # first. Multi-replica clusters keep the chart's default rolling strategy.
+    var.replicas <= 1 ? [
+      {
+        name  = "strategy.rollingUpdate.maxSurge"
+        value = "0"
+      },
+      {
+        name  = "strategy.rollingUpdate.maxUnavailable"
+        value = "1"
+      },
+    ] : [],
+    [
+      # Tolerate the system node taint so Karpenter runs on system nodes
+      {
+        name  = "tolerations[0].key"
+        value = "CriticalAddonsOnly"
+      },
+      {
+        name  = "tolerations[0].operator"
+        value = "Exists"
+      },
+      {
+        name  = "tolerations[0].effect"
+        value = "NoSchedule"
+      },
+      # Resource requests to ensure Karpenter gets scheduled
+      {
+        name  = "resources.requests.cpu"
+        value = "100m"
+      },
+      {
+        name  = "resources.requests.memory"
+        value = "256Mi"
+      },
+    ]
+  )
 
   depends_on = [
     aws_iam_role_policy.karpenter_controller,
