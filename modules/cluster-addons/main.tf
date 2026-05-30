@@ -6,30 +6,58 @@ data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
 # =============================================================================
-# NGINX Ingress Controller
+# NGINX Ingress Controller (F5 NGINX, OSS edition)
 # =============================================================================
-
+# Migrated off the community kubernetes/ingress-nginx chart, which the upstream
+# Kubernetes project retired in March 2026 (no further security patches). This
+# is F5's actively-maintained nginxinc/kubernetes-ingress controller.
+#
+# Cutover note: the release `name` changed (ingress-nginx -> nginx-ingress),
+# which forces Terraform to destroy the old release before creating this one.
+# That cleanly removes the community controller, its `nginx` IngressClass, and
+# its NLB, then provisions the F5 controller fresh (new NLB; external-dns
+# re-points Route 53 automatically). The IngressClass keeps the name "nginx" so
+# existing Ingress objects (apps + Argo CD) need no className change.
 resource "helm_release" "ingress_nginx" {
-  name             = "ingress-nginx"
+  name             = "nginx-ingress"
   namespace        = "ingress-nginx"
-  repository       = "https://kubernetes.github.io/ingress-nginx"
-  chart            = "ingress-nginx"
-  version          = "4.12.0"
+  repository       = "oci://ghcr.io/nginx/charts"
+  chart            = "nginx-ingress"
+  version          = "2.6.0"
   create_namespace = true
 
   set = [
-    # Use NLB (Network Load Balancer) instead of CLB
+    # OSS edition (not NGINX Plus)
+    {
+      name  = "nginxplus"
+      value = "false"
+    },
+    # Keep the IngressClass named "nginx" so existing Ingresses are unaffected
+    {
+      name  = "controller.ingressClass.name"
+      value = "nginx"
+    },
+    {
+      name  = "controller.ingressClass.create"
+      value = "true"
+    },
+    # Use NLB (Network Load Balancer) instead of CLB.
+    # type = "string" stops Terraform coercing values like "true" into booleans;
+    # the F5 chart's schema requires annotation values to be strings.
     {
       name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-type"
       value = "nlb"
+      type  = "string"
     },
     {
       name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-scheme"
       value = "internet-facing"
+      type  = "string"
     },
     {
       name  = "controller.service.annotations.service\\.beta\\.kubernetes\\.io/aws-load-balancer-cross-zone-load-balancing-enabled"
       value = "true"
+      type  = "string"
     },
     # Resource requests for Karpenter scheduling
     {

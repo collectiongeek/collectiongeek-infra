@@ -7,8 +7,12 @@ terraform {
       version = "~> 5.0"
     }
     helm = {
-      source  = "hashicorp/helm"
-      version = "~> 3.0"
+      source = "hashicorp/helm"
+      # Pinned to 3.0.x (Helm SDK 3.17.2). Provider 3.1.x bundles Helm 3.18.5,
+      # which has a regression rejecting remote $ref URLs in chart
+      # values.schema.json (helm/helm#31136) — breaks the F5 nginx-ingress
+      # chart. Revert to ~> 3.0 once a provider bundles Helm >= 3.18.6/3.19.
+      version = ">= 3.0.0, < 3.1.0"
     }
     kubectl = {
       source  = "alekc/kubectl"

@@ -54,9 +54,10 @@ resource "helm_release" "argocd" {
       name  = "server.ingress.annotations.cert-manager\\.io/cluster-issuer"
       value = var.cluster_issuer
     },
-    # Force HTTPS redirect
+    # Force HTTPS redirect (F5 NGINX annotation; replaces the community
+    # nginx.ingress.kubernetes.io/force-ssl-redirect, which F5 ignores)
     {
-      name  = "server.ingress.annotations.nginx\\.ingress\\.kubernetes\\.io/force-ssl-redirect"
+      name  = "server.ingress.annotations.nginx\\.org/redirect-to-https"
       value = "true"
     },
     ],
