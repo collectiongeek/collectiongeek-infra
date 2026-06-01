@@ -1,0 +1,46 @@
+name: Security Scan
+
+# IaC misconfig + secret scanning (Trivy). Replaces tfsec — Trivy's
+# misconfig scanner runs the same AVD/tfsec check library.
+# Posture: REPORT-ONLY. Uploads to the Security tab; never fails a PR.
+# Tighten with exit-code: "1" once .trivyignore is tuned.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "0 6 * * 1" # weekly drift scan for newly-disclosed checks
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trivy:
+    name: Trivy (IaC misconfig / secrets)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write # required to upload SARIF to code scanning
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run Trivy config scan
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config # IaC mode (Terraform/HCL); the tfsec equivalent
+          scanners: misconfig,secret
+          format: sarif
+          output: trivy.sarif
+          exit-code: "0" # report-only
+        env:
+          TRIVY_DB_REPOSITORY: mirror.gcr.io/aquasec/trivy-db,ghcr.io/aquasecurity/trivy-db
+
+      - name: Upload Trivy SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: trivy.sarif
+          category: trivy
