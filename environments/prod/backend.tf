@@ -1,15 +1,6 @@
+# Partial backend config — see environments/test/backend.tf for the rationale.
 terraform {
   backend "s3" {
-    bucket         = "collectiongeek-infra-state-uswest1"
-    key            = "prod/terraform.tfstate" # Separate state from test
-    region         = "us-west-1"
-    dynamodb_table = "collectiongeek-infra-locks-uswest1"
-    encrypt        = true
-
-    # Cross-account access: assume the role in SharedServices
-    assume_role = {
-      role_arn = "arn:aws:iam::860350045682:role/tofu-state-access"
-    }
-    profile = "prod"
+    encrypt = true
   }
 }

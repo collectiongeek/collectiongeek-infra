@@ -1,6 +1,7 @@
 variable "aws_profile" {
-  description = "AWS CLI profile for the Test account"
+  description = "AWS CLI profile for the Test account. Local laptop apply only — leave empty in CI, where env-var creds from the configure-aws-credentials OIDC action are used."
   type        = string
+  default     = ""
 }
 
 variable "aws_region" {
@@ -66,6 +67,13 @@ variable "gitops_repo_url" {
 
 variable "slack_webhook_url" {
   description = "Slack webhook URL for Argo CD notifications (optional)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "observability_slack_webhook_url" {
+  description = "Slack webhook for Grafana Alertmanager alerts (optional). Separate from slack_webhook_url, which is the Argo CD notifications webhook (different channel)."
   type        = string
   default     = ""
   sensitive   = true

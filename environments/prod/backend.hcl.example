@@ -1,0 +1,9 @@
+# Local laptop apply only — gitignored copy goes alongside as `backend.hcl`.
+# CI writes its own backend.hcl from the `production` GitHub Environment vars+secrets.
+
+bucket         = "<state-bucket-name>"            # e.g. collectiongeek-infra-state-uswest1
+key            = "prod/terraform.tfstate"
+region         = "us-west-1"
+dynamodb_table = "<state-lock-table-name>"        # e.g. collectiongeek-infra-locks-uswest1
+assume_role    = { role_arn = "arn:aws:iam::<sharedservices-account-id>:role/tofu-state-access" }
+profile        = "<profile-name>"                 # e.g. prod

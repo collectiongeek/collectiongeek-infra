@@ -1,0 +1,103 @@
+name: infra
+on:
+  push:
+    branches: [main]
+    paths:
+      - "environments/**"
+      - "modules/**"
+      - ".github/workflows/infra.yml"
+
+permissions:
+  id-token: write # required for GitHub OIDC → AWS (no stored AWS keys)
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    environment: test # selects the "test" Environment vars+secrets; no approval gate
+    defaults: { run: { working-directory: environments/test } }
+    env:
+      # ---- Terraform variables ----
+      # TF_VAR_<name> is case-sensitive and MUST match the root variable name exactly.
+      # Non-identifying values come from Environment `vars`; account/zone IDs, ARNs,
+      # webhooks, and the domain come from Environment `secrets` so they never appear
+      # in this public repo or in build logs.
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+      TF_VAR_vpc_cidr: ${{ vars.VPC_CIDR }}
+      TF_VAR_availability_zones: ${{ vars.AVAILABILITY_ZONES }} # JSON list: ["us-west-1a","us-west-1b"]
+      TF_VAR_cluster_name: ${{ vars.CLUSTER_NAME }}
+      TF_VAR_kubernetes_version: ${{ vars.KUBERNETES_VERSION }}
+      TF_VAR_gitops_repo_url: ${{ vars.GITOPS_REPO_URL }}
+      TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
+      TF_VAR_shared_services_account_id: ${{ secrets.SHARED_SERVICES_ACCOUNT_ID }}
+      TF_VAR_route53_zone_id: ${{ secrets.ROUTE53_ZONE_ID }}
+      TF_VAR_dns_manager_role_arn: ${{ secrets.DNS_MANAGER_ROLE_ARN }}
+      TF_VAR_cert_manager_role_arn: ${{ secrets.CERT_MANAGER_ROLE_ARN }}
+      # Optional webhooks — leave the GitHub secrets unset until you wire them up.
+      TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }} # Argo CD notifications
+      TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }} # Alertmanager
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Test-account role (OIDC)
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: opentofu/setup-opentofu@v1
+      - name: Write partial backend config
+        # The backend.tf in the repo is intentionally bare. We materialise the
+        # state-bucket / lock-table / cross-account state role here, from
+        # Environment vars+secrets, so they don't sit in the public repo.
+        # `STATE_ROLE_ARN` is a secret and is auto-masked in logs.
+        run: |
+          cat > backend.hcl <<EOF
+          bucket         = "${{ vars.STATE_BUCKET }}"
+          key            = "${{ vars.STATE_KEY }}"
+          region         = "${{ vars.STATE_REGION }}"
+          dynamodb_table = "${{ vars.STATE_LOCK_TABLE }}"
+          assume_role    = { role_arn = "${{ secrets.STATE_ROLE_ARN }}" }
+          EOF
+      - run: tofu init -backend-config=backend.hcl
+      - run: tofu plan -out=tfplan
+      - run: tofu apply -auto-approve tfplan
+
+  prod:
+    needs: test # prod won't run unless test succeeded
+    runs-on: ubuntu-latest
+    environment: production # selects the "production" Environment vars+secrets + approval gate
+    defaults: { run: { working-directory: environments/prod } }
+    env:
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+      TF_VAR_vpc_cidr: ${{ vars.VPC_CIDR }}
+      TF_VAR_availability_zones: ${{ vars.AVAILABILITY_ZONES }}
+      TF_VAR_cluster_name: ${{ vars.CLUSTER_NAME }}
+      TF_VAR_kubernetes_version: ${{ vars.KUBERNETES_VERSION }}
+      TF_VAR_gitops_repo_url: ${{ vars.GITOPS_REPO_URL }}
+      TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
+      TF_VAR_shared_services_account_id: ${{ secrets.SHARED_SERVICES_ACCOUNT_ID }}
+      TF_VAR_route53_zone_id: ${{ secrets.ROUTE53_ZONE_ID }}
+      TF_VAR_dns_manager_role_arn: ${{ secrets.DNS_MANAGER_ROLE_ARN }}
+      TF_VAR_cert_manager_role_arn: ${{ secrets.CERT_MANAGER_ROLE_ARN }}
+      TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
+      TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Production-account role (OIDC)
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: opentofu/setup-opentofu@v1
+      - name: Write partial backend config
+        run: |
+          cat > backend.hcl <<EOF
+          bucket         = "${{ vars.STATE_BUCKET }}"
+          key            = "${{ vars.STATE_KEY }}"
+          region         = "${{ vars.STATE_REGION }}"
+          dynamodb_table = "${{ vars.STATE_LOCK_TABLE }}"
+          assume_role    = { role_arn = "${{ secrets.STATE_ROLE_ARN }}" }
+          EOF
+      - run: tofu init -backend-config=backend.hcl
+      # Plan then apply the saved plan — what the reviewer approved is exactly
+      # what gets applied. The `production` Environment's required-reviewers rule
+      # pauses BOTH steps until a human approves.
+      - run: tofu plan -out=tfplan
+      - run: tofu apply -auto-approve tfplan

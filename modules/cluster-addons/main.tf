@@ -360,3 +360,75 @@ resource "helm_release" "external_dns" {
     },
   ]
 }
+
+# =============================================================================
+# external-secrets
+# =============================================================================
+
+# IRSA role the operator assumes to read secrets from AWS Secrets Manager.
+# Same shape as your cert-manager/external-dns roles. The data sources it uses
+# (aws_caller_identity, aws_region) already exist at the top of this module.
+resource "aws_iam_role" "external_secrets" {
+  name = "${var.cluster_name}-external-secrets"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect    = "Allow"
+        Principal = { Federated = var.cluster_oidc_provider_arn }
+        Action    = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "${var.cluster_oidc_issuer_url}:aud" = "sts.amazonaws.com"
+            # ESO's controller service account, created by the chart below
+            "${var.cluster_oidc_issuer_url}:sub" = "system:serviceaccount:external-secrets:external-secrets"
+          }
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy" "external_secrets" {
+  name = "read-observability-secrets"
+  role = aws_iam_role.external_secrets.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret",
+        ]
+        # Scoped to observability/* only. Broaden this prefix as ESO is given
+        # more secret paths to manage elsewhere.
+        Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:observability/*"
+      }
+    ]
+  })
+}
+
+resource "helm_release" "external_secrets" {
+  name             = "external-secrets"
+  repository       = "https://charts.external-secrets.io"
+  chart            = "external-secrets"
+  version          = "2.6.0" # CHART version (see note); verify the current one before pinning
+  namespace        = "external-secrets"
+  create_namespace = true
+
+  set = [
+    {
+      name  = "installCRDs"
+      value = "true" # value key can change across major versions — confirm with `helm show values`
+    },
+    # IRSA: annotate ESO's controller service account with the role above so it
+    # reads Secrets Manager with no static keys (identical mechanism to cert-manager).
+    {
+      name  = "serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+      value = aws_iam_role.external_secrets.arn
+    },
+  ]
+}
