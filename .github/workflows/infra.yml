@@ -52,7 +52,7 @@ jobs:
           # to git, and no later step pushes/fetches. Dropping it shrinks
           # the blast radius if a downstream action is ever compromised.
           persist-credentials: false
-      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Test-account role (OIDC)
           aws-region: ${{ vars.AWS_REGION }}
@@ -113,7 +113,7 @@ jobs:
           # to git, and no later step pushes/fetches. Dropping it shrinks
           # the blast radius if a downstream action is ever compromised.
           persist-credentials: false
-      - uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Production-account role (OIDC)
           aws-region: ${{ vars.AWS_REGION }}
