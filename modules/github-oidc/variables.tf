@@ -20,7 +20,6 @@ variable "role_name" {
 }
 
 variable "managed_policy_arns" {
-  description = "Managed IAM policies to attach to the role. Defaults to AdministratorAccess for bootstrap — tighten later (e.g. via Access Analyzer-generated policy)."
+  description = "Managed IAM policy ARNs to attach to the role. Required — no default, so each consumer makes the trust-boundary choice visible at its module call site (admin vs. narrower). Pair with inline `aws_iam_role_policy` if you need finer scoping."
   type        = list(string)
-  default     = ["arn:aws:iam::aws:policy/AdministratorAccess"]
 }

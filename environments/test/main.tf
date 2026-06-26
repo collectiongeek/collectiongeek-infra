@@ -118,6 +118,11 @@ module "github_oidc" {
   github_org              = "collectiongeek"
   github_repo             = "collectiongeek-infra"
   github_environment_name = "test" # must match the workflow's `environment:` key
+
+  # TODO(security): tighten to a narrower policy once IAM Access Analyzer has
+  # observed enough CI runs to generate a per-service policy. AdministratorAccess
+  # is the deliberate bootstrap choice — see PHASE-0 §0.6 for rationale.
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AdministratorAccess"]
 }
 
 # =============================================================================

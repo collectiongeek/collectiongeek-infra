@@ -29,6 +29,15 @@ resource "aws_kms_alias" "secrets" {
 }
 
 # --- Grafana admin password: GENERATED, never supplied by a human -----------
+# KNOWN LIMITATION (tracked for a follow-up PR):
+# `random_password.result` and `aws_secretsmanager_secret_version.secret_string`
+# are stored in Terraform state in plaintext — `sensitive = true` only affects
+# CLI display, not state. The mitigations today are layered KMS encryption on
+# the state bucket itself and the tightly-scoped IAM access to it (see §0.5 of
+# PHASE-0-FOUNDATIONS). The proper fix is `ephemeral "random_password"` +
+# `secret_string_wo` write-only attribute, which requires OpenTofu ≥ 1.11,
+# random ≥ 3.7, and aws ≥ 5.83 — small refactor, but it rotates the password,
+# so it earns its own focused PR with a reviewed plan rather than a drive-by.
 resource "random_password" "grafana" {
   length  = 24
   special = true

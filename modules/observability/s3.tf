@@ -163,12 +163,18 @@ resource "aws_s3_bucket_public_access_block" "tempo" {
 }
 
 # Auto-expire old chunks so storage stays cheap.
+# `abort_incomplete_multipart_upload` reclaims storage from multipart uploads
+# that never finished (pod restart mid-write, network blip, etc.) — those
+# parts aren't S3 objects, so the `expiration` rule below won't touch them.
 resource "aws_s3_bucket_lifecycle_configuration" "loki" {
   bucket = aws_s3_bucket.loki.id
   rule {
     id     = "expire"
     status = "Enabled"
     filter {} # apply to all objects in the bucket
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
     expiration { days = var.log_retention_days }
   }
 }
@@ -178,6 +184,9 @@ resource "aws_s3_bucket_lifecycle_configuration" "tempo" {
     id     = "expire"
     status = "Enabled"
     filter {} # apply to all objects in the bucket
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
+    }
     expiration { days = var.trace_retention_days }
   }
 }
