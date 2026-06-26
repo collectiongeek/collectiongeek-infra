@@ -406,6 +406,21 @@ resource "aws_iam_role_policy" "external_secrets" {
         # Scoped to observability/* only. Broaden this prefix as ESO is given
         # more secret paths to manage elsewhere.
         Resource = "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:observability/*"
+      },
+      {
+        # Lets ESO decrypt the observability CMK (modules/observability/secrets.tf
+        # AWS-0098 fix). Scoped with kms:ViaService so this grant can only be
+        # exercised via Secrets Manager — paired with the secretsmanager scope
+        # above, ESO can only decrypt observability/* secrets. No coupling to
+        # the observability module's CMK ARN.
+        Effect   = "Allow"
+        Action   = ["kms:Decrypt", "kms:DescribeKey"]
+        Resource = "*"
+        Condition = {
+          StringEquals = {
+            "kms:ViaService" = "secretsmanager.${data.aws_region.current.name}.amazonaws.com"
+          }
+        }
       }
     ]
   })
