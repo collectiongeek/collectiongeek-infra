@@ -125,6 +125,28 @@ module "github_oidc" {
   managed_policy_arns = ["arn:aws:iam::aws:policy/AdministratorAccess"]
 }
 
+# Grant the CI role kubernetes-API access to this cluster. Without this,
+# kubectl_manifest and helm_release resources fail with 401 — EKS only
+# auto-authorises the IAM identity that created the cluster.
+# Access entries are the modern replacement for the aws-auth ConfigMap;
+# they work alongside it under
+# authentication_mode = "API_AND_CONFIG_MAP" (set in modules/eks/main.tf).
+resource "aws_eks_access_entry" "github_actions" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.github_oidc.role_arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "github_actions" {
+  cluster_name  = module.eks.cluster_name
+  principal_arn = module.github_oidc.role_arn
+  policy_arn    = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
+  }
+}
+
 # =============================================================================
 # Argo CD
 # =============================================================================
