@@ -25,7 +25,7 @@ jobs:
       contents: read
       security-events: write # required to upload SARIF to code scanning
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7.0.0
 
       - name: Run Trivy config scan
         uses: aquasecurity/trivy-action@v0.36.0
