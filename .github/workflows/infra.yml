@@ -46,7 +46,7 @@ jobs:
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Token isn't needed after checkout — Terraform doesn't shell out
           # to git, and no later step pushes/fetches. Dropping it shrinks
@@ -107,7 +107,7 @@ jobs:
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           # Token isn't needed after checkout — Terraform doesn't shell out
           # to git, and no later step pushes/fetches. Dropping it shrinks
