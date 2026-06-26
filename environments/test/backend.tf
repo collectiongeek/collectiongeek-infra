@@ -1,15 +1,11 @@
+# Partial backend config — concrete values are supplied at `tofu init` time so
+# they don't sit in this public repo.
+#   - In CI: the workflow writes a backend.hcl from GitHub Environment vars and
+#     runs `tofu init -backend-config=backend.hcl`.
+#   - On a laptop: drop a local-only `backend.hcl` next to this file and run
+#     `tofu init -backend-config=backend.hcl`. The file is gitignored.
 terraform {
   backend "s3" {
-    bucket         = "collectiongeek-infra-state-uswest1" # Same bucket as shared-services
-    key            = "test/terraform.tfstate"             # Different key (path) per environment
-    region         = "us-west-1"
-    dynamodb_table = "collectiongeek-infra-locks-uswest1"
-    encrypt        = true
-
-    # Cross-account access: assume the role in SharedServices
-    assume_role = {
-      role_arn = "arn:aws:iam::860350045682:role/tofu-state-access" # SharedServices account ID
-    }
-    profile = "test"
+    encrypt = true
   }
 }

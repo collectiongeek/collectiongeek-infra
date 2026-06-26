@@ -96,6 +96,26 @@ module "cluster_addons" {
 }
 
 # =============================================================================
+# GitHub Actions OIDC (CI bootstrap)
+# =============================================================================
+# Creates the GitHub OIDC provider in this account and a role the `infra`
+# workflow's `prod` job assumes. First apply is from a laptop (one-time
+# bootstrap exception to the "never apply prod from a laptop" rule); after
+# that, CI manages itself. Paste module.github_oidc.role_arn into the
+# `production` GitHub Environment's AWS_ROLE_ARN secret.
+module "github_oidc" {
+  source                  = "../../modules/github-oidc"
+  github_org              = "collectiongeek"
+  github_repo             = "collectiongeek-infra"
+  github_environment_name = "production" # must match the workflow's `environment:` key
+
+  # TODO(security): tighten to a narrower policy once IAM Access Analyzer has
+  # observed enough CI runs to generate a per-service policy. AdministratorAccess
+  # is the deliberate bootstrap choice — see PHASE-0 §0.6 for rationale.
+  managed_policy_arns = ["arn:aws:iam::aws:policy/AdministratorAccess"]
+}
+
+# =============================================================================
 # Argo CD
 # =============================================================================
 

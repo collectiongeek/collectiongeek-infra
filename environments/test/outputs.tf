@@ -44,3 +44,30 @@ output "argocd_url" {
   description = "Argo CD UI URL"
   value       = module.argocd.argocd_url
 }
+
+# Observability
+output "loki_role_arn" {
+  description = "IAM role ARN for the loki service account (IRSA)."
+  value       = module.observability.loki_role_arn
+}
+
+output "tempo_role_arn" {
+  description = "IAM role ARN for the tempo service account (IRSA)."
+  value       = module.observability.tempo_role_arn
+}
+
+output "loki_bucket_name" {
+  description = "S3 bucket name for Loki chunks."
+  value       = module.observability.loki_bucket_name
+}
+
+output "tempo_bucket_name" {
+  description = "S3 bucket name for Tempo traces."
+  value       = module.observability.tempo_bucket_name
+}
+
+# GitHub Actions OIDC
+output "github_actions_role_arn" {
+  description = "IAM role ARN that the infra workflow's test job assumes via GitHub OIDC."
+  value       = module.github_oidc.role_arn
+}

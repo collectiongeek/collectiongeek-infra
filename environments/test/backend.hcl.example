@@ -1,0 +1,12 @@
+# Local laptop apply only — gitignored copy goes alongside as `backend.hcl`.
+# CI writes its own backend.hcl from the `test` GitHub Environment vars+secrets.
+#
+# bucket / key / region / dynamodb_table identify the OpenTofu state location.
+# assume_role.role_arn lets this account's identity hop into SharedServices
+# (where the state bucket lives).
+
+bucket         = "<state-bucket-name>"            # e.g. collectiongeek-infra-state-uswest1
+key            = "test/terraform.tfstate"
+region         = "us-west-1"
+dynamodb_table = "<state-lock-table-name>"        # e.g. collectiongeek-infra-locks-uswest1
+assume_role    = { role_arn = "arn:aws:iam::<sharedservices-account-id>:role/tofu-state-access" }

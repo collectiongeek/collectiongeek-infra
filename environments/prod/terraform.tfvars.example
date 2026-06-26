@@ -1,6 +1,17 @@
-# Production environment configuration
-# Copy this to terraform.tfvars and fill in your values
+# Local laptop apply only.
+#
+# CI does NOT read this file — it gets every value from the `production` GitHub
+# Environment's `vars` (non-sensitive) and `secrets` (sensitive). See
+# .github/workflows/infra.yml for the full mapping.
+#
+# To apply from your laptop (rarely needed for prod; the sanctioned path is CI):
+#   1) cp terraform.tfvars.example terraform.tfvars   (the real file is gitignored)
+#   2) cp backend.hcl.example       backend.hcl       (also gitignored)
+#   3) Fill both in with real values from AWS / your shared-services outputs
+#   4) tofu init -backend-config=backend.hcl
+#      tofu apply
 
+# AWS profile is laptop-only; leave empty in CI (the OIDC role provides creds).
 aws_profile = "prod"
 aws_region  = "us-west-1"
 
@@ -28,3 +39,6 @@ cert_manager_role_arn = "arn:aws:iam::111111111111:role/route53-cert-manager"
 # Argo CD
 gitops_repo_url   = "https://github.com/<your-github-username>/gitops-repo.git"
 slack_webhook_url = ""
+
+# Observability
+observability_slack_webhook_url = "" # Optional: Grafana/Alertmanager alerts. NOT the Argo CD webhook above.

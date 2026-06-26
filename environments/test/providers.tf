@@ -22,12 +22,18 @@ terraform {
       source  = "hashicorp/tls"
       version = "~> 4.0"
     }
+    random = {
+      source = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 }
 
 provider "aws" {
-  region  = var.aws_region
-  profile = var.aws_profile
+  region = var.aws_region
+  # In CI: var.aws_profile is "" → null → provider uses env-var creds set by
+  # aws-actions/configure-aws-credentials (OIDC). On a laptop: pass --profile.
+  profile = var.aws_profile != "" ? var.aws_profile : null
 
   default_tags {
     tags = {
@@ -45,7 +51,10 @@ provider "helm" {
     exec = {
       api_version = "client.authentication.k8s.io/v1beta1"
       command     = "aws"
-      args        = ["eks", "get-token", "--cluster-name", var.cluster_name, "--profile", var.aws_profile]
+      args = concat(
+        ["eks", "get-token", "--cluster-name", var.cluster_name],
+        var.aws_profile != "" ? ["--profile", var.aws_profile] : []
+      )
     }
   }
 }
@@ -57,6 +66,9 @@ provider "kubectl" {
   exec {
     api_version = "client.authentication.k8s.io/v1beta1"
     command     = "aws"
-    args        = ["eks", "get-token", "--cluster-name", var.cluster_name, "--profile", var.aws_profile]
+    args = concat(
+      ["eks", "get-token", "--cluster-name", var.cluster_name],
+      var.aws_profile != "" ? ["--profile", var.aws_profile] : []
+    )
   }
 }
