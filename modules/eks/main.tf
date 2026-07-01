@@ -37,6 +37,44 @@ resource "aws_iam_role_policy_attachment" "cluster_vpc_controller" {
 }
 
 # =============================================================================
+# Secrets Envelope Encryption (KMS)
+# =============================================================================
+
+# Customer-managed key used for envelope encryption of Kubernetes secrets in
+# etcd. The IAM principal running the apply (CI: AdministratorAccess) needs
+# kms:CreateGrant/DescribeKey at create time; EKS then manages a grant for the
+# control plane at runtime, so the default (root-delegated) key policy suffices.
+resource "aws_kms_key" "secrets" {
+  description             = "Envelope encryption for ${var.cluster_name} Kubernetes secrets"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+
+  tags = {
+    Name = "${var.cluster_name}-eks-secrets"
+  }
+}
+
+resource "aws_kms_alias" "secrets" {
+  name          = "alias/${var.cluster_name}-eks-secrets"
+  target_key_id = aws_kms_key.secrets.key_id
+}
+
+# =============================================================================
+# Control Plane Logging
+# =============================================================================
+
+# EKS auto-creates this log group on first write with never-expire retention.
+# Creating it explicitly bounds cost with a finite retention period.
+resource "aws_cloudwatch_log_group" "cluster" {
+  name              = "/aws/eks/${var.cluster_name}/cluster"
+  retention_in_days = var.cluster_log_retention_days
+
+  tags = {
+    Name = "${var.cluster_name}-control-plane-logs"
+  }
+}
+
+# =============================================================================
 # EKS Cluster
 # =============================================================================
 
@@ -44,6 +82,15 @@ resource "aws_eks_cluster" "this" {
   name     = var.cluster_name
   version  = var.kubernetes_version
   role_arn = aws_iam_role.cluster.arn
+
+  enabled_cluster_log_types = var.cluster_enabled_log_types
+
+  encryption_config {
+    provider {
+      key_arn = aws_kms_key.secrets.arn
+    }
+    resources = ["secrets"]
+  }
 
   vpc_config {
     subnet_ids              = concat(var.private_subnet_ids, var.public_subnet_ids)
@@ -59,6 +106,7 @@ resource "aws_eks_cluster" "this" {
   depends_on = [
     aws_iam_role_policy_attachment.cluster_policy,
     aws_iam_role_policy_attachment.cluster_vpc_controller,
+    aws_cloudwatch_log_group.cluster,
   ]
 
   tags = {
