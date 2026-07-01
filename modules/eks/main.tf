@@ -46,7 +46,7 @@ resource "aws_iam_role_policy_attachment" "cluster_vpc_controller" {
 # control plane at runtime, so the default (root-delegated) key policy suffices.
 resource "aws_kms_key" "secrets" {
   description             = "Envelope encryption for ${var.cluster_name} Kubernetes secrets"
-  deletion_window_in_days = 7
+  deletion_window_in_days = 30
   enable_key_rotation     = true
 
   tags = {

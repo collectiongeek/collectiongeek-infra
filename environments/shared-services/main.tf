@@ -25,8 +25,14 @@ resource "aws_s3_bucket_versioning" "state" {
 # the kms:Decrypt/GenerateDataKey they need to use the encrypted objects.
 resource "aws_kms_key" "state" {
   description             = "CMK for OpenTofu state bucket encryption"
-  deletion_window_in_days = 7
+  deletion_window_in_days = 30
   enable_key_rotation     = true
+
+  # Losing this key makes every existing state object permanently unreadable,
+  # so guard it like the bucket and lock table it protects.
+  lifecycle {
+    prevent_destroy = true
+  }
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -55,6 +61,17 @@ resource "aws_kms_key" "state" {
           "kms:DescribeKey"
         ]
         Resource = "*"
+        # Constrain the grant to this key's use for the state bucket's objects.
+        # S3 SSE-KMS supplies the object ARN as the encryption context, so the
+        # cross-account principals can't repurpose the key for anything else.
+        Condition = {
+          StringLike = {
+            "kms:EncryptionContext:aws:s3:arn" = [
+              aws_s3_bucket.state.arn,
+              "${aws_s3_bucket.state.arn}/*"
+            ]
+          }
+        }
       }
     ]
   })
