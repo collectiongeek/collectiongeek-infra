@@ -19,12 +19,59 @@ resource "aws_s3_bucket_versioning" "state" {
   }
 }
 
+# Customer-managed key for state-bucket encryption. A CMK (not the AWS-managed
+# aws/s3 key) is required here: Test and Prod read/write their state
+# cross-account, and only a CMK's key policy can grant those external accounts
+# the kms:Decrypt/GenerateDataKey they need to use the encrypted objects.
+resource "aws_kms_key" "state" {
+  description             = "CMK for OpenTofu state bucket encryption"
+  deletion_window_in_days = 7
+  enable_key_rotation     = true
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid       = "EnableRootIAM"
+        Effect    = "Allow"
+        Principal = { AWS = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root" }
+        Action    = "kms:*"
+        Resource  = "*"
+      },
+      {
+        Sid    = "AllowCrossAccountStateEncryption"
+        Effect = "Allow"
+        Principal = {
+          AWS = [
+            "arn:aws:iam::${var.test_account_id}:root",
+            "arn:aws:iam::${var.prod_account_id}:root"
+          ]
+        }
+        Action = [
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:ReEncrypt*",
+          "kms:GenerateDataKey*",
+          "kms:DescribeKey"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+resource "aws_kms_alias" "state" {
+  name          = "alias/tofu-state"
+  target_key_id = aws_kms_key.state.key_id
+}
+
 resource "aws_s3_bucket_server_side_encryption_configuration" "state" {
   bucket = aws_s3_bucket.state.id
 
   rule {
     apply_server_side_encryption_by_default {
-      sse_algorithm = "aws:kms"
+      sse_algorithm     = "aws:kms"
+      kms_master_key_id = aws_kms_key.state.arn
     }
     bucket_key_enabled = true
   }

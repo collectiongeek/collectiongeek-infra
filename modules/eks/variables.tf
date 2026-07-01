@@ -19,6 +19,18 @@ variable "vpc_id" {
   type        = string
 }
 
+variable "cluster_enabled_log_types" {
+  description = "EKS control plane log types to ship to CloudWatch Logs"
+  type        = list(string)
+  default     = ["api", "audit", "authenticator", "controllerManager", "scheduler"]
+}
+
+variable "cluster_log_retention_days" {
+  description = "Retention (days) for EKS control plane logs; bounds CloudWatch cost"
+  type        = number
+  default     = 90
+}
+
 variable "private_subnet_ids" {
   description = "Private subnet IDs for worker nodes"
   type        = list(string)
