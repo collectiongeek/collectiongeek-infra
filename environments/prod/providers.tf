@@ -3,8 +3,11 @@ terraform {
 
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
-      version = "~> 5.0"
+      source = "hashicorp/aws"
+      # Floor is 5.83: modules/observability/secrets.tf uses the
+      # `secret_string_wo` write-only attribute (added in aws 5.83) to keep
+      # secret payloads out of Terraform state.
+      version = "~> 5.83"
     }
     helm = {
       source = "hashicorp/helm"
@@ -23,8 +26,11 @@ terraform {
       version = "~> 4.0"
     }
     random = {
-      source  = "hashicorp/random"
-      version = "~> 3.0"
+      source = "hashicorp/random"
+      # Floor is 3.7: modules/observability/secrets.tf uses the
+      # `ephemeral "random_password"` block (added in random 3.7) so the
+      # generated Grafana password never lands in state.
+      version = "~> 3.7"
     }
   }
 }

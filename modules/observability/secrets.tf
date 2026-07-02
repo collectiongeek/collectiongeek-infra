@@ -29,16 +29,18 @@ resource "aws_kms_alias" "secrets" {
 }
 
 # --- Grafana admin password: GENERATED, never supplied by a human -----------
-# KNOWN LIMITATION (tracked for a follow-up PR):
-# `random_password.result` and `aws_secretsmanager_secret_version.secret_string`
-# are stored in Terraform state in plaintext — `sensitive = true` only affects
-# CLI display, not state. The mitigations today are layered KMS encryption on
-# the state bucket itself and the tightly-scoped IAM access to it (see §0.5 of
-# PHASE-0-FOUNDATIONS). The proper fix is `ephemeral "random_password"` +
-# `secret_string_wo` write-only attribute, which requires OpenTofu ≥ 1.11,
-# random ≥ 3.7, and aws ≥ 5.83 — small refactor, but it rotates the password,
-# so it earns its own focused PR with a reviewed plan rather than a drive-by.
-resource "random_password" "grafana" {
+# The password is produced by an EPHEMERAL resource and written through the
+# `secret_string_wo` write-only attribute, so neither the generated value nor
+# the assembled secret payload is ever persisted to Terraform state (see
+# https://opentofu.org/docs/language/resources/ephemeral/). `ephemeral.*.result`
+# lives only for the duration of a single plan/apply graph walk. Requires
+# OpenTofu >= 1.11, random >= 3.7, aws >= 5.83 (pinned in each environment's
+# providers.tf).
+#
+# Because write-only values are never stored, the provider cannot diff them:
+# bump `secret_string_wo_version` to force a rewrite, i.e. to ROTATE the
+# password on a subsequent apply.
+ephemeral "random_password" "grafana" {
   length  = 24
   special = true
 }
@@ -50,10 +52,11 @@ resource "aws_secretsmanager_secret" "grafana" {
 
 resource "aws_secretsmanager_secret_version" "grafana" {
   secret_id = aws_secretsmanager_secret.grafana.id
-  secret_string = jsonencode({
+  secret_string_wo = jsonencode({
     admin-user     = "admin"
-    admin-password = random_password.grafana.result
+    admin-password = ephemeral.random_password.grafana.result
   })
+  secret_string_wo_version = 1
 }
 
 # --- Alertmanager Slack webhook: OPTIONAL, and DISTINCT from the Argo CD webhook ---
@@ -84,7 +87,8 @@ resource "aws_secretsmanager_secret" "slack" {
 }
 
 resource "aws_secretsmanager_secret_version" "slack" {
-  count         = local.slack_enabled ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.slack[0].id
-  secret_string = jsonencode({ url = var.slack_webhook_url })
+  count                    = local.slack_enabled ? 1 : 0
+  secret_id                = aws_secretsmanager_secret.slack[0].id
+  secret_string_wo         = jsonencode({ url = var.slack_webhook_url })
+  secret_string_wo_version = 1
 }
