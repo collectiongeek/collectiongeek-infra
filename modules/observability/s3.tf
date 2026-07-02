@@ -2,7 +2,7 @@
 # stripped). e.g. collectiongeek-app-test-loki-chunks-uswest1
 
 # Shared data sources for the module. Declared ONCE here and reused everywhere
-# (vpc_endpoint.tf, irsa.tf, secrets.tf) — do not redeclare in those files.
+# (irsa.tf, secrets.tf) — do not redeclare in those files.
 data "aws_region" "current" {}
 data "aws_caller_identity" "current" {}
 

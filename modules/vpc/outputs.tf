@@ -32,3 +32,8 @@ output "private_route_table_ids" {
   description = "Private route table IDs (for Gateway VPC endpoints)"
   value       = aws_route_table.private[*].id
 }
+
+output "s3_endpoint_id" {
+  description = "ID of the S3 Gateway VPC endpoint (null when enable_s3_endpoint = false)"
+  value       = one(aws_vpc_endpoint.s3[*].id)
+}

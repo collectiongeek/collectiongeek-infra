@@ -1,17 +1,9 @@
 variable "cluster_name" {
-    type = string
-}
-
-variable "vpc_id" {
-    type = string
-}
-
-variable "private_route_table_ids" {
-    type = list(string)
+  type = string
 }
 
 variable "oidc_provider_arn" {
-    type = string
+  type = string
 }
 
 variable "oidc_provider_url" {
@@ -23,17 +15,17 @@ variable "oidc_provider_url" {
   }
 }
 
-variable "log_retention_days"   { 
-    type = number
-    default = 90 
+variable "log_retention_days" {
+  type    = number
+  default = 90
 }
 
-variable "trace_retention_days" { 
-    type = number
-    default = 30 
+variable "trace_retention_days" {
+  type    = number
+  default = 30
 }
 
 variable "namespace" {
-    type = string
-    default = "observability"
+  type    = string
+  default = "observability"
 }
