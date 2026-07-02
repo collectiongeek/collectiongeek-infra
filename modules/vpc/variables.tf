@@ -56,3 +56,9 @@ variable "flow_logs_retention_days" {
   type        = number
   default     = 14
 }
+
+variable "enable_s3_endpoint" {
+  description = "Create the S3 Gateway VPC endpoint (keeps in-account S3 traffic off the NAT Gateway). Generic VPC-level infrastructure; default true."
+  type        = bool
+  default     = true
+}
