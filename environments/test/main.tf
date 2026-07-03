@@ -114,10 +114,13 @@ module "cluster_addons" {
 # Paste module.github_oidc.role_arn into the `test` GitHub Environment's
 # AWS_ROLE_ARN secret.
 module "github_oidc" {
-  source                  = "../../modules/github-oidc"
-  github_org              = "collectiongeek"
-  github_repo             = "collectiongeek-infra"
-  github_environment_name = "test" # must match the workflow's `environment:` key
+  source      = "../../modules/github-oidc"
+  github_org  = "collectiongeek"
+  github_repo = "collectiongeek-infra"
+
+  # Test uses a single Environment; the list form matches the module's updated
+  # interface. Must match the workflow's `environment:` key.
+  github_environment_names = ["test"]
 
   # TODO(security): tighten to a narrower policy once IAM Access Analyzer has
   # observed enough CI runs to generate a per-service policy. AdministratorAccess

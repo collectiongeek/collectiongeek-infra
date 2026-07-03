@@ -104,10 +104,15 @@ module "cluster_addons" {
 # that, CI manages itself. Paste module.github_oidc.role_arn into the
 # `production` GitHub Environment's AWS_ROLE_ARN secret.
 module "github_oidc" {
-  source                  = "../../modules/github-oidc"
-  github_org              = "collectiongeek"
-  github_repo             = "collectiongeek-infra"
-  github_environment_name = "production" # must match the workflow's `environment:` key
+  source      = "../../modules/github-oidc"
+  github_org  = "collectiongeek"
+  github_repo = "collectiongeek-infra"
+
+  # Both prod CI jobs assume this one role: the ungated prod-plan job runs in
+  # the "production-plan" Environment and the gated prod-apply job in
+  # "production", so the trust policy must allow both. Each name must match a
+  # workflow `environment:` key exactly. See .github/workflows/infra.yml.
+  github_environment_names = ["production", "production-plan"]
 
   # TODO(security): tighten to a narrower policy once IAM Access Analyzer has
   # observed enough CI runs to generate a per-service policy. AdministratorAccess
