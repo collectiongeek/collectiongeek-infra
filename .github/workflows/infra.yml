@@ -56,7 +56,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Test-account role (OIDC)
           aws-region: ${{ vars.AWS_REGION }}
-      - uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4 # v2.0.1
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
       - name: Write partial backend config
         # The backend.tf in the repo is intentionally bare. We materialise the
         # state-bucket / lock-table / cross-account state role here, from
@@ -132,7 +132,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Production-account role (OIDC)
           aws-region: ${{ vars.AWS_REGION }}
-      - uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4 # v2.0.1
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
       - name: Write partial backend config
         run: |
           cat > backend.hcl <<EOF
@@ -199,7 +199,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Production-account role (OIDC)
           aws-region: ${{ vars.AWS_REGION }}
-      - uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4 # v2.0.1
+      - uses: opentofu/setup-opentofu@a1320f892987e89d278cc92dc5adc984fb93aca4 # v2.0.2
       - name: Write partial backend config
         run: |
           cat > backend.hcl <<EOF
