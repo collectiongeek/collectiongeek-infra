@@ -74,21 +74,36 @@ jobs:
       - run: tofu plan -out=tfplan
       - run: tofu apply -auto-approve tfplan
 
-  # KNOWN LIMITATION (tracked for a follow-up PR):
-  # The `production` Environment approval gate fires *before* this job runs,
-  # so reviewers approve "deploy to prod" — not the specific plan output.
-  # `tofu plan -out=tfplan` followed immediately by `tofu apply tfplan` keeps
-  # plan and apply consistent *within this run*, but no human reads the diff
-  # before apply executes. The follow-up splits this into prod-plan (no gate,
-  # uploads tfplan as an artifact) and prod-apply (gated, downloads + applies
-  # that exact plan), so the artifact a reviewer inspects is what gets applied.
-  prod:
+  # Prod is split so a reviewer approves the SPECIFIC PLAN, not just the intent
+  # to deploy:
+  #
+  #   prod-plan  — runs in the `production-plan` Environment (no protection
+  #                rules). Prints the plan to the logs for review, encrypts it,
+  #                and uploads it as an artifact.
+  #   prod-apply — runs in the `production` Environment (required reviewers).
+  #                Pauses for approval, then applies THAT EXACT plan.
+  #
+  # `tofu apply <planfile>` refuses a plan whose recorded state serial or
+  # provider versions have moved since capture, so a stale approval fails loudly
+  # instead of applying something the reviewer never saw.
+  #
+  # Why the plan is encrypted: an OpenTofu plan file stores every attribute —
+  # including sensitive ones — in plaintext, and this is a PUBLIC repo whose
+  # Actions artifacts are broadly downloadable. PLAN_ENCRYPTION_KEY is a secret
+  # shared by both Environments. The human-readable plan in the logs is safe:
+  # GitHub masks registered `secrets.*` values there.
+  prod-plan:
     concurrency:
+      # Shared group with prod-apply: a newer commit cancels an older prod
+      # pipeline whether it's still planning OR parked waiting for approval.
+      # Stops a stale plan from being approved and applied after a newer commit
+      # lands — the state lock only serialises concurrent applies, it doesn't
+      # reject a stale tfplan.
       group: ${{ github.workflow }}-production
       cancel-in-progress: true
     needs: test # prod won't run unless test succeeded
     runs-on: ubuntu-latest
-    environment: production # selects the "production" Environment vars+secrets + approval gate
+    environment: production-plan # Environment vars+secrets, but NO approval gate
     defaults: { run: { working-directory: environments/prod } }
     env:
       TF_VAR_aws_region: ${{ vars.AWS_REGION }}
@@ -128,8 +143,80 @@ jobs:
           assume_role    = { role_arn = "${{ secrets.STATE_ROLE_ARN }}" }
           EOF
       - run: tofu init -backend-config=backend.hcl
-      # Plan then apply the saved plan — what the reviewer approved is exactly
-      # what gets applied. The `production` Environment's required-reviewers rule
-      # pauses BOTH steps until a human approves.
+      # The full plan is printed here for the reviewer to read before approving
+      # prod-apply. `secrets.*` values are masked in the logs by GitHub.
       - run: tofu plan -out=tfplan
+      # Encrypt before upload: the binary plan carries secrets in plaintext and
+      # public-repo artifacts are broadly downloadable. The key comes from the
+      # env (never argv); PBKDF2 with a random salt. openssl needs no gpg-agent.
+      - name: Encrypt plan
+        env:
+          PLAN_ENCRYPTION_KEY: ${{ secrets.PLAN_ENCRYPTION_KEY }}
+        run: |
+          openssl enc -aes-256-cbc -md sha256 -pbkdf2 -iter 200000 -salt \
+            -in tfplan -out tfplan.enc -pass env:PLAN_ENCRYPTION_KEY
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: prod-tfplan
+          path: environments/prod/tfplan.enc
+          if-no-files-found: error
+          retention-days: 1 # a plan older than a day should be re-run, not applied
+
+  prod-apply:
+    concurrency:
+      group: ${{ github.workflow }}-production
+      cancel-in-progress: true
+    needs: prod-plan # applies exactly the plan prod-plan produced
+    runs-on: ubuntu-latest
+    environment: production # required-reviewers gate: approval pauses this job
+    defaults: { run: { working-directory: environments/prod } }
+    env:
+      TF_VAR_aws_region: ${{ vars.AWS_REGION }}
+      TF_VAR_vpc_cidr: ${{ vars.VPC_CIDR }}
+      TF_VAR_availability_zones: ${{ vars.AVAILABILITY_ZONES }}
+      TF_VAR_cluster_name: ${{ vars.CLUSTER_NAME }}
+      TF_VAR_kubernetes_version: ${{ vars.KUBERNETES_VERSION }}
+      TF_VAR_gitops_repo_url: ${{ vars.GITOPS_REPO_URL }}
+      TF_VAR_domain_name: ${{ secrets.DOMAIN_NAME }}
+      TF_VAR_shared_services_account_id: ${{ secrets.SHARED_SERVICES_ACCOUNT_ID }}
+      TF_VAR_route53_zone_id: ${{ secrets.ROUTE53_ZONE_ID }}
+      TF_VAR_dns_manager_role_arn: ${{ secrets.DNS_MANAGER_ROLE_ARN }}
+      TF_VAR_cert_manager_role_arn: ${{ secrets.CERT_MANAGER_ROLE_ARN }}
+      TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
+      TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
+      # Same-run download: no extra token permissions needed. Lands the file in
+      # the prod working dir (defaults.working-directory applies to `run:` steps
+      # only, not to this action, so the path is set explicitly).
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: prod-tfplan
+          path: environments/prod
+      - uses: aws-actions/configure-aws-credentials@e7f100cf4c008499ea8adda475de1042d6975c7b # v6.2.0
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }} # the Production-account role (OIDC)
+          aws-region: ${{ vars.AWS_REGION }}
+      - uses: opentofu/setup-opentofu@847eaa4afeb791b06daa46e8eafa8b1b68d7cfb4 # v2.0.1
+      - name: Write partial backend config
+        run: |
+          cat > backend.hcl <<EOF
+          bucket         = "${{ vars.STATE_BUCKET }}"
+          key            = "${{ vars.STATE_KEY }}"
+          region         = "${{ vars.STATE_REGION }}"
+          dynamodb_table = "${{ vars.STATE_LOCK_TABLE }}"
+          assume_role    = { role_arn = "${{ secrets.STATE_ROLE_ARN }}" }
+          EOF
+      - name: Decrypt plan
+        env:
+          PLAN_ENCRYPTION_KEY: ${{ secrets.PLAN_ENCRYPTION_KEY }}
+        run: |
+          openssl enc -d -aes-256-cbc -md sha256 -pbkdf2 -iter 200000 \
+            -in tfplan.enc -out tfplan -pass env:PLAN_ENCRYPTION_KEY
+      - run: tofu init -backend-config=backend.hcl
+      # Apply the exact plan the reviewer approved. `tofu apply <file>` refuses a
+      # plan whose state serial or provider versions have moved since capture,
+      # so a stale approval fails instead of applying drifted changes.
       - run: tofu apply -auto-approve tfplan
