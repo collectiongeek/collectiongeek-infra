@@ -18,13 +18,17 @@ resource "aws_iam_openid_connect_provider" "github" {
 
 # Role that GitHub Actions runs in this account assume via OIDC.
 #
-# The trust policy ties the role to a *specific repo* and a *specific
-# GitHub Environment*. Without the `:environment:<name>` segment, any
+# The trust policy ties the role to a *specific repo* and a *specific set
+# of GitHub Environments*. Without the `:environment:<name>` segment, any
 # workflow in the repo (including a contributor's branch) could assume
-# this role. Scoping to the Environment makes the GitHub Environment's
+# this role. Scoping to the Environment(s) makes each GitHub Environment's
 # protection rules — required reviewers, branch restrictions — the gate
 # for who can take this identity. Same shape as IRSA's `:sub` condition,
 # pointed at GitHub instead of EKS.
+#
+# `sub` is matched against a list, so the role can be shared by more than
+# one Environment (e.g. an ungated plan Environment and a gated apply
+# Environment) — StringLike treats the list as OR: any pattern may match.
 resource "aws_iam_role" "github_actions" {
   name = var.role_name
 
@@ -40,7 +44,10 @@ resource "aws_iam_role" "github_actions" {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_org}/${var.github_repo}:environment:${var.github_environment_name}"
+            "token.actions.githubusercontent.com:sub" = [
+              for env in var.github_environment_names :
+              "repo:${var.github_org}/${var.github_repo}:environment:${env}"
+            ]
           }
         }
       }

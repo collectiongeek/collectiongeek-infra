@@ -8,9 +8,14 @@ variable "github_repo" {
   type        = string
 }
 
-variable "github_environment_name" {
-  description = "GitHub Environment name in the workflow's `environment:` key — e.g. \"test\" or \"production\". Must match exactly; this is the string the OIDC token's `sub` claim will contain."
-  type        = string
+variable "github_environment_names" {
+  description = "GitHub Environment names allowed to assume this role. Each must match a workflow `environment:` key exactly — it's the string the OIDC token's `sub` claim carries. The trust policy allows any name in the list, so a role shared across e.g. an ungated plan Environment and a gated apply Environment lists both."
+  type        = list(string)
+
+  validation {
+    condition     = length(var.github_environment_names) > 0
+    error_message = "Provide at least one GitHub Environment name; an empty list produces a trust policy that matches nothing and leaves the role unusable."
+  }
 }
 
 variable "role_name" {
