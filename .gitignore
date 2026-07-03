@@ -3,7 +3,13 @@
 *.tfstate.backup
 *.tfstate.*.backup
 .terraform/
-.terraform.lock.hcl
+# Each ENVIRONMENT's .terraform.lock.hcl is committed (see
+# environments/*/.terraform.lock.hcl): CI runs `tofu init` separately for the
+# plan and apply jobs on different runners, so a committed lock pins identical
+# provider versions across the two. Move it deliberately with
+# `tofu init -upgrade`. Lockfiles under modules/ are just artifacts of init-ing
+# a child module directly — keep those ignored.
+modules/**/.terraform.lock.hcl
 *.tfplan
 crash.log
 crash.*.log
