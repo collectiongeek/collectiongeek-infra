@@ -41,6 +41,12 @@ variable "public_subnet_ids" {
   type        = list(string)
 }
 
+variable "ebs_csi_addon_version" {
+  description = "aws-ebs-csi-driver addon version (e.g. v1.41.0-eksbuild.1). null = the EKS default for the cluster's Kubernetes version; upgrades are then a deliberate PR that sets this."
+  type        = string
+  default     = null
+}
+
 variable "system_node_instance_types" {
   description = "Instance types for the system node group"
   type        = list(string)
