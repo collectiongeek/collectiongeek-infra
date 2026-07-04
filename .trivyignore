@@ -1,0 +1,14 @@
+# Accepted misconfig / vuln IDs, one per line. e.g.
+# AVD-AWS-0089
+#
+# Findings consciously DEFERRED in the #15 triage (PR #7) — kept here as the
+# single tracking point until each gets a real fix or a permanent suppression.
+# They are NOT suppressed: leaving them out of the active list means they keep
+# showing up in scans, which is intentional pressure to resolve them.
+#
+#   AVD-AWS-0040 / AVD-AWS-0041 — EKS API endpoint is public. Deliberate for a
+#     solo operator without a VPN/bastion; revisit with private endpoint + SSM.
+#   AVD-AWS-0164 — public subnets auto-assign public IPs. Standard for
+#     ALB-facing subnets; nodes live in private subnets.
+#   DynamoDB state-lock table: PITR + CMK not enabled.
+#   S3 state bucket: access logging not enabled.
