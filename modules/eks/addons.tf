@@ -50,9 +50,14 @@ resource "aws_eks_addon" "ebs_csi_driver" {
   resolve_conflicts_on_create = "OVERWRITE"
   resolve_conflicts_on_update = "OVERWRITE"
 
-  # The controller Deployment needs schedulable nodes; without this the addon
-  # reports DEGRADED until the first node group exists.
-  depends_on = [aws_eks_node_group.system]
+  # The controller Deployment needs schedulable nodes (DEGRADED until the
+  # first node group exists), and the role must already carry its permissions
+  # policy — referencing the role ARN alone doesn't order the attachment, so
+  # without it the controller can start unable to call EC2.
+  depends_on = [
+    aws_eks_node_group.system,
+    aws_iam_role_policy_attachment.ebs_csi_driver,
+  ]
 
   tags = {
     Name = "${var.cluster_name}-ebs-csi-driver"
