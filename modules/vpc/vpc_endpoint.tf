@@ -34,20 +34,28 @@ data "aws_iam_policy_document" "s3_endpoint" {
     }
   }
 
-  # ECR stores image layers in an AWS-owned regional S3 bucket and redirects
-  # pulls there via presigned URLs. A Gateway endpoint captures ALL regional
-  # S3 traffic (prefix-list route, no NAT fallback), so without this exception
-  # the in-account restriction above 403s every layer download and nodes
-  # can't pull images (EKS addons, aws-node, kube-proxy, app images).
-  # https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html#ecr-minimum-s3-perms
+  # Container registries that back onto in-region S3 buckets outside our
+  # account. A Gateway endpoint captures ALL regional S3 traffic (prefix-list
+  # route, no NAT fallback), so without these exceptions the in-account
+  # restriction above 403s every layer download and nodes can't pull images.
+  #  - starport: ECR's layer store (EKS addons, aws-node, kube-proxy, app
+  #    images) — AWS's documented minimum ECR exception:
+  #    https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html#ecr-minimum-s3-perms
+  #  - registry-k8s-io: registry.k8s.io's regional blob store (kube-state-
+  #    metrics, ingress-nginx, and other Kubernetes-project images)
+  # Registries whose blob stores are NOT in-region S3 (quay.io, docker.io,
+  # ghcr.io) bypass the endpoint via NAT and need no exception.
   statement {
-    sid = "AllowEcrLayerBucket"
+    sid = "AllowPublicRegistryLayerBuckets"
     principals {
       type        = "*"
       identifiers = ["*"]
     }
-    actions   = ["s3:GetObject"]
-    resources = ["arn:aws:s3:::prod-${data.aws_region.current.name}-starport-layer-bucket/*"]
+    actions = ["s3:GetObject"]
+    resources = [
+      "arn:aws:s3:::prod-${data.aws_region.current.name}-starport-layer-bucket/*",
+      "arn:aws:s3:::prod-registry-k8s-io-${data.aws_region.current.name}/*",
+    ]
   }
 }
 
