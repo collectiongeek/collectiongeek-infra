@@ -33,6 +33,22 @@ data "aws_iam_policy_document" "s3_endpoint" {
       values   = [data.aws_caller_identity.current.account_id]
     }
   }
+
+  # ECR stores image layers in an AWS-owned regional S3 bucket and redirects
+  # pulls there via presigned URLs. A Gateway endpoint captures ALL regional
+  # S3 traffic (prefix-list route, no NAT fallback), so without this exception
+  # the in-account restriction above 403s every layer download and nodes
+  # can't pull images (EKS addons, aws-node, kube-proxy, app images).
+  # https://docs.aws.amazon.com/AmazonECR/latest/userguide/vpc-endpoints.html#ecr-minimum-s3-perms
+  statement {
+    sid = "AllowEcrLayerBucket"
+    principals {
+      type        = "*"
+      identifiers = ["*"]
+    }
+    actions   = ["s3:GetObject"]
+    resources = ["arn:aws:s3:::prod-${data.aws_region.current.name}-starport-layer-bucket/*"]
+  }
 }
 
 resource "aws_vpc_endpoint" "s3" {
