@@ -43,6 +43,8 @@ jobs:
       # Optional webhooks — leave the GitHub secrets unset until you wire them up.
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }} # Argo CD notifications
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }} # Alertmanager
+      TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
+      TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
@@ -119,6 +121,8 @@ jobs:
       TF_VAR_cert_manager_role_arn: ${{ secrets.CERT_MANAGER_ROLE_ARN }}
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
+      TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
+      TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
@@ -184,6 +188,8 @@ jobs:
       TF_VAR_cert_manager_role_arn: ${{ secrets.CERT_MANAGER_ROLE_ARN }}
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
+      TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
+      TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:

@@ -78,3 +78,17 @@ variable "observability_slack_webhook_url" {
   default     = ""
   sensitive   = true
 }
+
+variable "grafana_oidc_client_secret" {
+  description = "WorkOS OAuth-app client secret for Grafana SSO (optional; Portal SSO doc §S.3)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "argocd_oidc_client_secret" {
+  description = "WorkOS OAuth-app client secret for Argo CD SSO (optional; Portal SSO doc §S.3)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}

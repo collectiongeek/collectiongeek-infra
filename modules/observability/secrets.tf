@@ -92,3 +92,56 @@ resource "aws_secretsmanager_secret_version" "slack" {
   secret_string_wo         = jsonencode({ url = var.slack_webhook_url })
   secret_string_wo_version = 1
 }
+
+# --- Portal SSO OIDC client secrets: OPTIONAL (Portal SSO doc §S.3) ---------
+# One WorkOS OAuth-app client secret per portal. Same shape as the Slack
+# webhook above: empty default = not created; write-only = never in state.
+# Named under observability/* because that prefix is ESO's read scope. The
+# Grafana key name is the exact GF_* env var so the ExternalSecret can sync
+# it verbatim into the pod environment.
+
+variable "grafana_oidc_client_secret" {
+  description = "WorkOS OAuth-app client secret for Grafana SSO (optional)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "argocd_oidc_client_secret" {
+  description = "WorkOS OAuth-app client secret for Argo CD SSO (optional)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+locals {
+  # Same declassification story as slack_enabled above.
+  grafana_oidc_enabled = nonsensitive(var.grafana_oidc_client_secret != "")
+  argocd_oidc_enabled  = nonsensitive(var.argocd_oidc_client_secret != "")
+}
+
+resource "aws_secretsmanager_secret" "grafana_oidc" {
+  count      = local.grafana_oidc_enabled ? 1 : 0
+  name       = "observability/grafana-oidc"
+  kms_key_id = aws_kms_key.secrets.arn
+}
+
+resource "aws_secretsmanager_secret_version" "grafana_oidc" {
+  count                    = local.grafana_oidc_enabled ? 1 : 0
+  secret_id                = aws_secretsmanager_secret.grafana_oidc[0].id
+  secret_string_wo         = jsonencode({ GF_AUTH_GENERIC_OAUTH_CLIENT_SECRET = var.grafana_oidc_client_secret })
+  secret_string_wo_version = 1
+}
+
+resource "aws_secretsmanager_secret" "argocd_oidc" {
+  count      = local.argocd_oidc_enabled ? 1 : 0
+  name       = "observability/argocd-oidc"
+  kms_key_id = aws_kms_key.secrets.arn
+}
+
+resource "aws_secretsmanager_secret_version" "argocd_oidc" {
+  count                    = local.argocd_oidc_enabled ? 1 : 0
+  secret_id                = aws_secretsmanager_secret.argocd_oidc[0].id
+  secret_string_wo         = jsonencode({ client-secret = var.argocd_oidc_client_secret })
+  secret_string_wo_version = 1
+}
