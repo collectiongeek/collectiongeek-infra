@@ -128,6 +128,11 @@ resource "helm_release" "argocd" {
     local.argocd_insecure_via_params
     ? [{ name = "configs.params.server\\.insecure", value = "true" }]
     : [{ name = "server.extraArgs[0]", value = "--insecure" }],
+    # §S.5 lock: once WorkOS SSO is verified, the local admin account goes
+    # away. Break-glass = set local_admin_enabled back to true (one-line PR).
+    var.local_admin_enabled ? [] : [
+      { name = "configs.params.admin\\.enabled", value = "false" }
+    ],
     # Pin the resource tracking method when set. The app default flips from
     # "label" (2.x) to "annotation" (3.x); pinning avoids a silent change to how
     # live resources are tracked during a chart-major upgrade. Null = app default.

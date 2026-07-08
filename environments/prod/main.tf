@@ -161,6 +161,11 @@ module "argocd" {
   oidc_client_id   = "client_01KWZKRV9CV5J84YE9QF58G4T0"
   oidc_admin_email = "29parsecs.dubious@icloud.com"
 
+  # §S.5 lock (SSO verified both envs 2026-07-08): WorkOS is the only door.
+  # BREAK-GLASS: flip back to true (or delete the line) to restore the local
+  # admin password login.
+  local_admin_enabled = false
+
   # Pinned explicitly so module-default changes never move prod implicitly.
   # Promote only after validation in test (apply test before prod).
   # NOTE: 7.x -> 9.x crosses two chart majors (Argo CD 2.x -> 3.x). The
