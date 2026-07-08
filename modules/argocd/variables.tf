@@ -64,3 +64,9 @@ variable "oidc_admin_email" {
   type        = string
   default     = ""
 }
+
+variable "local_admin_enabled" {
+  description = "Keep Argo CD's local admin password login enabled. Set false only after WorkOS SSO is verified (Portal SSO doc §S.5) — flipping back to true is the break-glass path."
+  type        = bool
+  default     = true
+}
