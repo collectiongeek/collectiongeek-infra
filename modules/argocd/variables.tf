@@ -47,3 +47,20 @@ variable "resource_tracking_method" {
     error_message = "resource_tracking_method must be one of: label, annotation, annotation+label (or null)."
   }
 }
+variable "oidc_issuer" {
+  description = "WorkOS AuthKit domain issuer for Argo CD SSO, e.g. https://<subdomain>.authkit.app (Portal SSO doc §S.3). Empty = OIDC not configured."
+  type        = string
+  default     = ""
+}
+
+variable "oidc_client_id" {
+  description = "WorkOS Connect OAuth-app client ID for Argo CD SSO (public; the matching client secret arrives via ESO from observability/argocd-oidc)."
+  type        = string
+  default     = ""
+}
+
+variable "oidc_admin_email" {
+  description = "Sole identity mapped to role:admin in Argo CD RBAC. Everyone else who can authenticate gets NO role (policy.default is empty) — see Portal SSO doc §S.1."
+  type        = string
+  default     = ""
+}

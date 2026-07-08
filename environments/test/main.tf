@@ -163,6 +163,12 @@ module "argocd" {
   gitops_repo_url   = var.gitops_repo_url
   slack_webhook_url = var.slack_webhook_url
 
+  # WorkOS SSO (Portal SSO doc §S.3). Client ID and issuer are public; the
+  # client secret flows Secrets Manager -> ESO (observability/argocd-oidc).
+  oidc_issuer      = "https://festive-river-57-staging.authkit.app"
+  oidc_client_id   = "client_01KWZKNK38GWNY62D524729NDG"
+  oidc_admin_email = "29parsecs.dubious@icloud.com"
+
   # Pin chart version per-environment so this major bump (7.x -> 9.x, i.e.
   # Argo CD 2.x -> 3.x) stays isolated to test. Prod keeps the module default.
   # NOTE: crosses two chart majors — review the 2.14->3.0 upgrade notes and
