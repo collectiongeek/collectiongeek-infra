@@ -13,6 +13,65 @@ locals {
   # own chart version is deliberately bumped.
   argocd_chart_major         = tonumber(split(".", var.argocd_chart_version)[0])
   argocd_insecure_via_params = local.argocd_chart_major >= 8
+
+  # WorkOS SSO (Portal SSO doc §S.3). All three inputs or nothing — a partial
+  # config would render a broken login button.
+  oidc_enabled = var.oidc_issuer != "" && var.oidc_client_id != "" && var.oidc_admin_email != ""
+
+  # oidc.config + RBAC go through helm `values` (multiline YAML strings do not
+  # survive `set` encoding; `set` entries still win on conflict, so the two
+  # mechanisms compose). The client secret is never in this file: Argo CD
+  # resolves `$argocd-oidc:client-secret` at runtime from the ESO-synced
+  # Secret below (the `$<secret>:<key>` syntax requires that Secret to carry
+  # the app.kubernetes.io/part-of: argocd label).
+  oidc_values = local.oidc_enabled ? [
+    yamlencode({
+      configs = {
+        cm = {
+          "oidc.config" = <<-EOT
+            name: WorkOS
+            issuer: ${var.oidc_issuer}
+            clientID: ${var.oidc_client_id}
+            clientSecret: $argocd-oidc:client-secret
+            requestedScopes: ["openid", "profile", "email"]
+          EOT
+        }
+        rbac = {
+          # Authenticated ≠ authorized: app end-users share the WorkOS pool,
+          # so the default role is EMPTY and exactly one identity is admin.
+          "policy.default" = ""
+          "policy.csv"     = "g, ${var.oidc_admin_email}, role:admin\n"
+          "scopes"         = "[email]"
+        }
+      }
+      # The OIDC client secret, synced from Secrets Manager by ESO. Riding
+      # extraObjects keeps Argo CD's whole SSO story inside this module.
+      extraObjects = [{
+        apiVersion = "external-secrets.io/v1"
+        kind       = "ExternalSecret"
+        metadata = {
+          name      = "argocd-oidc"
+          namespace = "argocd"
+        }
+        spec = {
+          refreshInterval = "1h"
+          secretStoreRef  = { name = "aws-secretsmanager", kind = "ClusterSecretStore" }
+          target = {
+            name = "argocd-oidc"
+            template = {
+              metadata = {
+                labels = { "app.kubernetes.io/part-of" = "argocd" }
+              }
+            }
+          }
+          data = [{
+            secretKey = "client-secret"
+            remoteRef = { key = "observability/argocd-oidc", property = "client-secret" }
+          }]
+        }
+      }]
+    })
+  ] : []
 }
 
 # =============================================================================
@@ -26,6 +85,9 @@ resource "helm_release" "argocd" {
   chart            = "argo-cd"
   version          = var.argocd_chart_version
   create_namespace = true
+
+  # WorkOS SSO (empty list = no-op until the oidc_* variables are set).
+  values = local.oidc_values
 
   # v2 stored `set` as an unordered set; the v3 ordered-list attribute makes the
   # first plan show a one-time reorder of these entries (state is alphabetical)
