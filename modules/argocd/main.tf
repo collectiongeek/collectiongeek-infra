@@ -130,8 +130,11 @@ resource "helm_release" "argocd" {
     : [{ name = "server.extraArgs[0]", value = "--insecure" }],
     # §S.5 lock: once WorkOS SSO is verified, the local admin account goes
     # away. Break-glass = set local_admin_enabled back to true (one-line PR).
+    # The key MUST ride configs.cm (→ argocd-cm, watched live by the settings
+    # manager) — in configs.params (→ argocd-cmd-params-cm) it is silently
+    # ignored and the password keeps working.
     var.local_admin_enabled ? [] : [
-      { name = "configs.params.admin\\.enabled", value = "false" }
+      { name = "configs.cm.admin\\.enabled", value = "false" }
     ],
     # Pin the resource tracking method when set. The app default flips from
     # "label" (2.x) to "annotation" (3.x); pinning avoids a silent change to how
