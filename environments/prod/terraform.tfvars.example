@@ -42,3 +42,4 @@ slack_webhook_url = ""
 
 # Observability
 observability_slack_webhook_url = "" # Optional: Grafana/Alertmanager alerts. NOT the Argo CD webhook above.
+healthchecks_ping_url = "" # Optional: healthchecks.io ping URL (Phase 4 dead-man's switch).

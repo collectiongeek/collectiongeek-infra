@@ -79,6 +79,13 @@ variable "observability_slack_webhook_url" {
   sensitive   = true
 }
 
+variable "healthchecks_ping_url" {
+  description = "healthchecks.io ping URL for the Alertmanager dead-man's switch (optional; Phase 4 doc §4.4)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 variable "grafana_oidc_client_secret" {
   description = "WorkOS OAuth-app client secret for Grafana SSO (optional; Portal SSO doc §S.3)."
   type        = string

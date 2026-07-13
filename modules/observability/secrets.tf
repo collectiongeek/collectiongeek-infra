@@ -93,6 +93,36 @@ resource "aws_secretsmanager_secret_version" "slack" {
   secret_string_wo_version = 1
 }
 
+# --- healthchecks.io ping URL: OPTIONAL (Phase 4 §4.4 dead-man's switch) ----
+# The Alertmanager Watchdog route pings this URL every ~5 minutes;
+# healthchecks.io emails when the pings STOP. A capability URL — anyone
+# holding it can mask an outage — so same handling as the Slack webhook.
+
+variable "healthchecks_ping_url" {
+  description = "healthchecks.io ping URL for the Alertmanager dead-man's switch (optional)."
+  type        = string
+  sensitive   = true
+  default     = "" # empty = not wired yet; the secret below isn't created
+}
+
+locals {
+  # Same declassification story as slack_enabled.
+  healthchecks_enabled = nonsensitive(var.healthchecks_ping_url != "")
+}
+
+resource "aws_secretsmanager_secret" "healthchecks" {
+  count      = local.healthchecks_enabled ? 1 : 0
+  name       = "observability/healthchecks-ping"
+  kms_key_id = aws_kms_key.secrets.arn
+}
+
+resource "aws_secretsmanager_secret_version" "healthchecks" {
+  count                    = local.healthchecks_enabled ? 1 : 0
+  secret_id                = aws_secretsmanager_secret.healthchecks[0].id
+  secret_string_wo         = jsonencode({ url = var.healthchecks_ping_url })
+  secret_string_wo_version = 1
+}
+
 # --- Portal SSO OIDC client secrets: OPTIONAL (Portal SSO doc §S.3) ---------
 # One WorkOS OAuth-app client secret per portal. Same shape as the Slack
 # webhook above: empty default = not created; write-only = never in state.
