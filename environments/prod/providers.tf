@@ -17,6 +17,13 @@ terraform {
       # chart. Revert to ~> 3.0 once a provider bundles Helm >= 3.18.6/3.19.
       version = ">= 3.0.0, < 3.1.0"
     }
+    awscc = {
+      source = "hashicorp/awscc"
+      # Cloud Control provider, used only for AWS DevOps Agent — the
+      # devopsagent_* resources don't exist in the classic aws provider.
+      # Floor is 1.94: first release validated with those resources.
+      version = "~> 1.94"
+    }
     kubectl = {
       source  = "alekc/kubectl"
       version = "~> 2.0"
@@ -48,6 +55,16 @@ provider "aws" {
       Project     = "infrastructure"
     }
   }
+}
+
+# Second AWS "leg" for DevOps Agent only: the service isn't offered in
+# us-west-1, so its resources live in us-west-2 (var default) while everything
+# else stays on the classic provider above. Same account, same credentials —
+# only the region differs. awscc has no default_tags; the module tags its
+# resources explicitly.
+provider "awscc" {
+  region  = var.devops_agent_region
+  profile = var.aws_profile != "" ? var.aws_profile : null
 }
 
 provider "helm" {
