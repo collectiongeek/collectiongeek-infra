@@ -46,6 +46,17 @@ jobs:
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }} # dead-man's switch (Phase 4)
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
       TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
+      # ---- AWS DevOps Agent (module off until DEVOPS_AGENT_ENABLED var = "true") ----
+      # `|| 'false'` matters: an unset Environment var yields "", which is not
+      # a valid bool for TF_VAR_devops_agent_enabled. IDs/ARN are secrets per
+      # repo convention (public repo); names and the flag are plain vars.
+      TF_VAR_devops_agent_enabled: ${{ vars.DEVOPS_AGENT_ENABLED || 'false' }}
+      TF_VAR_devops_agent_idc_instance_arn: ${{ secrets.DEVOPS_AGENT_IDC_INSTANCE_ARN }}
+      TF_VAR_devops_agent_slack_service_id: ${{ secrets.DEVOPS_AGENT_SLACK_SERVICE_ID }}
+      TF_VAR_devops_agent_slack_workspace_id: ${{ secrets.DEVOPS_AGENT_SLACK_WORKSPACE_ID }}
+      TF_VAR_devops_agent_slack_workspace_name: ${{ vars.DEVOPS_AGENT_SLACK_WORKSPACE_NAME }}
+      TF_VAR_devops_agent_slack_channel_id: ${{ secrets.DEVOPS_AGENT_SLACK_CHANNEL_ID }}
+      TF_VAR_devops_agent_slack_channel_name: ${{ vars.DEVOPS_AGENT_SLACK_CHANNEL_NAME }}
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
@@ -125,6 +136,17 @@ jobs:
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
       TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
+      # ---- AWS DevOps Agent (module off until DEVOPS_AGENT_ENABLED var = "true") ----
+      # `|| 'false'` matters: an unset Environment var yields "", which is not
+      # a valid bool for TF_VAR_devops_agent_enabled. IDs/ARN are secrets per
+      # repo convention (public repo); names and the flag are plain vars.
+      TF_VAR_devops_agent_enabled: ${{ vars.DEVOPS_AGENT_ENABLED || 'false' }}
+      TF_VAR_devops_agent_idc_instance_arn: ${{ secrets.DEVOPS_AGENT_IDC_INSTANCE_ARN }}
+      TF_VAR_devops_agent_slack_service_id: ${{ secrets.DEVOPS_AGENT_SLACK_SERVICE_ID }}
+      TF_VAR_devops_agent_slack_workspace_id: ${{ secrets.DEVOPS_AGENT_SLACK_WORKSPACE_ID }}
+      TF_VAR_devops_agent_slack_workspace_name: ${{ vars.DEVOPS_AGENT_SLACK_WORKSPACE_NAME }}
+      TF_VAR_devops_agent_slack_channel_id: ${{ secrets.DEVOPS_AGENT_SLACK_CHANNEL_ID }}
+      TF_VAR_devops_agent_slack_channel_name: ${{ vars.DEVOPS_AGENT_SLACK_CHANNEL_NAME }}
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
@@ -193,6 +215,17 @@ jobs:
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
       TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
+      # ---- AWS DevOps Agent (module off until DEVOPS_AGENT_ENABLED var = "true") ----
+      # `|| 'false'` matters: an unset Environment var yields "", which is not
+      # a valid bool for TF_VAR_devops_agent_enabled. IDs/ARN are secrets per
+      # repo convention (public repo); names and the flag are plain vars.
+      TF_VAR_devops_agent_enabled: ${{ vars.DEVOPS_AGENT_ENABLED || 'false' }}
+      TF_VAR_devops_agent_idc_instance_arn: ${{ secrets.DEVOPS_AGENT_IDC_INSTANCE_ARN }}
+      TF_VAR_devops_agent_slack_service_id: ${{ secrets.DEVOPS_AGENT_SLACK_SERVICE_ID }}
+      TF_VAR_devops_agent_slack_workspace_id: ${{ secrets.DEVOPS_AGENT_SLACK_WORKSPACE_ID }}
+      TF_VAR_devops_agent_slack_workspace_name: ${{ vars.DEVOPS_AGENT_SLACK_WORKSPACE_NAME }}
+      TF_VAR_devops_agent_slack_channel_id: ${{ secrets.DEVOPS_AGENT_SLACK_CHANNEL_ID }}
+      TF_VAR_devops_agent_slack_channel_name: ${{ vars.DEVOPS_AGENT_SLACK_CHANNEL_NAME }}
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:

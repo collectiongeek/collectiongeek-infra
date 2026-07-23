@@ -43,3 +43,17 @@ slack_webhook_url = ""
 # Observability
 observability_slack_webhook_url = "" # Optional: Grafana/Alertmanager alerts. NOT the Argo CD webhook above.
 healthchecks_ping_url = "" # Optional: healthchecks.io ping URL (Phase 4 dead-man's switch).
+
+# AWS DevOps Agent (see devops-agent.tf; rollout steps in the Observability
+# doc "AWS DevOps Agent"). Off by default — nothing is created until enabled.
+devops_agent_enabled          = false
+devops_agent_region           = "us-west-2" # not us-west-1: DevOps Agent isn't offered there
+devops_agent_idc_instance_arn = ""          # aws sso-admin list-instances → InstanceArn (required when enabled)
+
+# Slack — fill these AFTER the one-time console OAuth registration (step 2 of
+# the rollout); leave empty until then and the Slack wiring is skipped.
+devops_agent_slack_service_id     = "" # aws devops-agent list-services → serviceType "slack"
+devops_agent_slack_workspace_id   = "" # T…
+devops_agent_slack_workspace_name = ""
+devops_agent_slack_channel_id     = "" # C… — this environment's channel, e.g. #cg-alerts-prod
+devops_agent_slack_channel_name   = "" # e.g. cg-alerts-prod

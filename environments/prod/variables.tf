@@ -99,3 +99,56 @@ variable "argocd_oidc_client_secret" {
   default     = ""
   sensitive   = true
 }
+
+# -----------------------------------------------------------------------------
+# AWS DevOps Agent (devops-agent.tf). All values arrive via GitHub Environment
+# vars/secrets in CI (TF_VAR_*) or terraform.tfvars on a laptop.
+# -----------------------------------------------------------------------------
+
+variable "devops_agent_enabled" {
+  description = "Master switch for the DevOps Agent module. Defaults off so the code can merge before the GitHub Environment vars/secrets exist; flip the DEVOPS_AGENT_ENABLED Environment var to \"true\" to roll out."
+  type        = bool
+  default     = false
+}
+
+variable "devops_agent_region" {
+  description = "Region hosting the agent space. DevOps Agent isn't offered in us-west-1; us-west-2 is the closest supported region. Must be one of: us-east-1, us-west-2, ap-southeast-2, ap-northeast-1, eu-central-1, eu-west-1."
+  type        = string
+  default     = "us-west-2"
+}
+
+variable "devops_agent_idc_instance_arn" {
+  description = "IAM Identity Center instance ARN for operator-app SSO (from `aws sso-admin list-instances`). Required once devops_agent_enabled is true."
+  type        = string
+  default     = ""
+}
+
+variable "devops_agent_slack_service_id" {
+  description = "Service ID of the console-registered Slack integration (`aws devops-agent list-services`, serviceType `slack`). Empty until the one-time OAuth registration is done — the Slack association is skipped meanwhile."
+  type        = string
+  default     = ""
+}
+
+variable "devops_agent_slack_workspace_id" {
+  description = "Slack workspace ID (T…) from the console registration."
+  type        = string
+  default     = ""
+}
+
+variable "devops_agent_slack_workspace_name" {
+  description = "Slack workspace name as registered."
+  type        = string
+  default     = ""
+}
+
+variable "devops_agent_slack_channel_id" {
+  description = "Slack channel ID (C…) receiving THIS environment's agent findings. Each environment posts to its own channel on purpose — see devops-agent.tf."
+  type        = string
+  default     = ""
+}
+
+variable "devops_agent_slack_channel_name" {
+  description = "Slack channel name matching devops_agent_slack_channel_id."
+  type        = string
+  default     = ""
+}
