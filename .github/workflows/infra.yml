@@ -6,6 +6,14 @@ on:
       - "environments/**"
       - "modules/**"
       - ".github/workflows/infra.yml"
+  # Manual trigger for runs whose inputs live OUTSIDE the repo: GitHub
+  # Environment vars/secrets are read at job runtime, so changing them (e.g.
+  # flipping DEVOPS_AGENT_ENABLED, adding the Slack IDs) needs a fresh run
+  # even though no commit changed. Without this, the only options were
+  # re-running an old run or pushing a dummy commit. Runs from the UI's
+  # "Run workflow" button on main; same jobs, same gates — prod still parks
+  # for approval.
+  workflow_dispatch:
 
 permissions:
   id-token: write # required for GitHub OIDC → AWS (no stored AWS keys)
