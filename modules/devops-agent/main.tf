@@ -103,47 +103,55 @@ resource "aws_iam_role_policy" "agent_space_slr" {
 # how the service stamps the session with the AgentSpaceId principal tag that
 # the managed policy's conditions key off.
 #
-# The second statement is IdC-specific (userguide: "Migrating from public
-# preview to GA", step 3): with Identity Center auth, the service uses
+# The second (idc-only) statement comes from the userguide's "Migrating from
+# public preview to GA", step 3: with Identity Center auth, the service uses
 # trusted identity propagation to carry WHO the signed-in human is into the
 # role session, and that needs sts:SetContext. The extra conditions pin it
 # down: only the Identity Center context provider may be attached
 # (ForAllValues:ArnEquals), and — because ForAllValues also matches an empty
 # set — the Null check requires a provider to actually be present.
+# The statement exists only when operator_auth_mode is "idc" (least
+# privilege: iam mode never requests SetContext, so don't grant it). A
+# future flip to idc is still a single apply — the trust change and the
+# space's operator_app change land together.
 resource "aws_iam_role" "operator_app" {
   name = "DevOpsAgentRole-Operator-${var.environment}"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [
-      {
-        Effect    = "Allow"
-        Principal = { Service = "aidevops.amazonaws.com" }
-        Action    = ["sts:AssumeRole", "sts:TagSession"]
-        Condition = {
-          StringEquals = { "aws:SourceAccount" = local.account_id }
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:aidevops:${var.agent_region}:${local.account_id}:agentspace/*"
+    Statement = concat(
+      [
+        {
+          Effect    = "Allow"
+          Principal = { Service = "aidevops.amazonaws.com" }
+          Action    = ["sts:AssumeRole", "sts:TagSession"]
+          Condition = {
+            StringEquals = { "aws:SourceAccount" = local.account_id }
+            ArnLike = {
+              "aws:SourceArn" = "arn:aws:aidevops:${var.agent_region}:${local.account_id}:agentspace/*"
+            }
           }
         }
-      },
-      {
-        Sid       = "TrustedIdentityPropagation"
-        Effect    = "Allow"
-        Principal = { Service = "aidevops.amazonaws.com" }
-        Action    = "sts:SetContext"
-        Condition = {
-          StringEquals = { "aws:SourceAccount" = local.account_id }
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:aidevops:${var.agent_region}:${local.account_id}:agentspace/*"
+      ],
+      var.operator_auth_mode == "idc" ? [
+        {
+          Sid       = "TrustedIdentityPropagation"
+          Effect    = "Allow"
+          Principal = { Service = "aidevops.amazonaws.com" }
+          Action    = "sts:SetContext"
+          Condition = {
+            StringEquals = { "aws:SourceAccount" = local.account_id }
+            ArnLike = {
+              "aws:SourceArn" = "arn:aws:aidevops:${var.agent_region}:${local.account_id}:agentspace/*"
+            }
+            "ForAllValues:ArnEquals" = {
+              "sts:RequestContextProviders" = ["arn:aws:iam::aws:contextProvider/IdentityCenter"]
+            }
+            Null = { "sts:RequestContextProviders" = "false" }
           }
-          "ForAllValues:ArnEquals" = {
-            "sts:RequestContextProviders" = ["arn:aws:iam::aws:contextProvider/IdentityCenter"]
-          }
-          Null = { "sts:RequestContextProviders" = "false" }
         }
-      }
-    ]
+      ] : []
+    )
   })
 }
 
@@ -160,7 +168,11 @@ resource "aws_iam_role_policy_attachment" "operator_app_managed" {
 # up the signed-in user. sso:*Instance* has no resource-level scoping, hence
 # "*"; identitystore is pinned to this account's stores. Without this, IdC
 # sign-in to the operator app fails even though the space creates fine.
+# Like the SetContext trust statement, idc-mode only: iam mode never
+# performs these lookups, so the role shouldn't hold them.
 resource "aws_iam_role_policy" "operator_app_idc" {
+  count = var.operator_auth_mode == "idc" ? 1 : 0
+
   name = "AllowIdentityCenterLookups"
   role = aws_iam_role.operator_app.id
 
@@ -211,19 +223,32 @@ resource "awscc_devopsagent_agent_space" "this" {
   description = var.agent_space_description != "" ? var.agent_space_description : null
   kms_key_arn = var.kms_key_arn
 
-  # Operator app auth = IAM Identity Center: log in to the web app with the
-  # same SSO identity used everywhere else, instead of juggling IAM
-  # credentials in a browser.
+  # Exactly one of the two auth blocks, selected by operator_auth_mode; a
+  # null attribute is treated as unset by the provider. Both keys are always
+  # present because the two arms of a conditional must have the same type.
+  # iam: open the web app from the console via this role (30-min sessions).
+  # idc: Identity Center SSO — only possible when an IdC instance exists in
+  # agent_region (see variables.tf for why that rules it out today).
   operator_app = {
-    idc = {
+    iam = var.operator_auth_mode == "iam" ? {
+      operator_app_role_arn = aws_iam_role.operator_app.arn
+    } : null
+    idc = var.operator_auth_mode == "idc" ? {
       idc_instance_arn      = var.idc_instance_arn
       operator_app_role_arn = aws_iam_role.operator_app.arn
-    }
+    } : null
   }
 
   tags = local.tags
 
   depends_on = [time_sleep.iam_propagation]
+
+  lifecycle {
+    precondition {
+      condition     = var.operator_auth_mode != "idc" || trimspace(var.idc_instance_arn) != ""
+      error_message = "operator_auth_mode is \"idc\", so idc_instance_arn must be set (aws sso-admin list-instances — and the instance must be in ${var.agent_region})."
+    }
+  }
 }
 
 # =============================================================================

@@ -20,7 +20,8 @@ module "devops_agent" {
   agent_space_name        = "collectiongeek-${var.environment}"
   agent_space_description = "DevOps Agent space for the CollectionGeek ${var.environment} account (self-monitoring; Slack: ${var.devops_agent_slack_channel_name != "" ? var.devops_agent_slack_channel_name : "not wired yet"})"
 
-  idc_instance_arn = var.devops_agent_idc_instance_arn
+  operator_auth_mode = var.devops_agent_operator_auth_mode
+  idc_instance_arn   = var.devops_agent_idc_instance_arn
 
   slack_service_id          = var.devops_agent_slack_service_id
   slack_workspace_id        = var.devops_agent_slack_workspace_id

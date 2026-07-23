@@ -28,14 +28,29 @@ variable "agent_space_description" {
   default     = ""
 }
 
-variable "idc_instance_arn" {
-  description = "IAM Identity Center instance ARN (from `aws sso-admin list-instances`). The operator web app authenticates through Identity Center, so this is required."
+variable "operator_auth_mode" {
+  description = <<-EOT
+    How humans sign in to the operator web app: "iam" (open it from the
+    console via an assumed role; 30-minute sessions) or "idc" (IAM Identity
+    Center SSO; 8-hour sessions). HARD CONSTRAINT discovered during rollout:
+    idc only works if the Identity Center *instance* lives in the SAME region
+    as the agent space — and our org instance lives in us-west-1, which is
+    not a DevOps Agent region. So iam is the working default; idc remains
+    supported for a future account-instance or re-homed-IdC setup.
+  EOT
   type        = string
+  default     = "iam"
 
   validation {
-    condition     = var.idc_instance_arn != ""
-    error_message = "idc_instance_arn is required: the operator app is configured for IAM Identity Center auth. Find it with `aws sso-admin list-instances`."
+    condition     = contains(["iam", "idc"], var.operator_auth_mode)
+    error_message = "operator_auth_mode must be \"iam\" or \"idc\"."
   }
+}
+
+variable "idc_instance_arn" {
+  description = "IAM Identity Center instance ARN (from `aws sso-admin list-instances`). Only used — and required — when operator_auth_mode is \"idc\". The instance MUST live in the same region as the agent space (agent_region)."
+  type        = string
+  default     = ""
 }
 
 variable "kms_key_arn" {
