@@ -110,6 +110,9 @@ resource "aws_iam_role_policy" "agent_space_slr" {
 # down: only the Identity Center context provider may be attached
 # (ForAllValues:ArnEquals), and — because ForAllValues also matches an empty
 # set — the Null check requires a provider to actually be present.
+# In iam mode this statement is inert (nothing requests SetContext); it's
+# kept so flipping operator_auth_mode to "idc" later is a one-variable
+# change, not an IAM migration.
 resource "aws_iam_role" "operator_app" {
   name = "DevOpsAgentRole-Operator-${var.environment}"
 
@@ -160,6 +163,8 @@ resource "aws_iam_role_policy_attachment" "operator_app_managed" {
 # up the signed-in user. sso:*Instance* has no resource-level scoping, hence
 # "*"; identitystore is pinned to this account's stores. Without this, IdC
 # sign-in to the operator app fails even though the space creates fine.
+# Like the SetContext trust statement, this is inert in iam mode but kept
+# for a clean future flip to idc.
 resource "aws_iam_role_policy" "operator_app_idc" {
   name = "AllowIdentityCenterLookups"
   role = aws_iam_role.operator_app.id
@@ -211,19 +216,32 @@ resource "awscc_devopsagent_agent_space" "this" {
   description = var.agent_space_description != "" ? var.agent_space_description : null
   kms_key_arn = var.kms_key_arn
 
-  # Operator app auth = IAM Identity Center: log in to the web app with the
-  # same SSO identity used everywhere else, instead of juggling IAM
-  # credentials in a browser.
+  # Exactly one of the two auth blocks, selected by operator_auth_mode; a
+  # null attribute is treated as unset by the provider. Both keys are always
+  # present because the two arms of a conditional must have the same type.
+  # iam: open the web app from the console via this role (30-min sessions).
+  # idc: Identity Center SSO — only possible when an IdC instance exists in
+  # agent_region (see variables.tf for why that rules it out today).
   operator_app = {
-    idc = {
+    iam = var.operator_auth_mode == "iam" ? {
+      operator_app_role_arn = aws_iam_role.operator_app.arn
+    } : null
+    idc = var.operator_auth_mode == "idc" ? {
       idc_instance_arn      = var.idc_instance_arn
       operator_app_role_arn = aws_iam_role.operator_app.arn
-    }
+    } : null
   }
 
   tags = local.tags
 
   depends_on = [time_sleep.iam_propagation]
+
+  lifecycle {
+    precondition {
+      condition     = var.operator_auth_mode != "idc" || var.idc_instance_arn != ""
+      error_message = "operator_auth_mode is \"idc\", so idc_instance_arn must be set (aws sso-admin list-instances — and the instance must be in ${var.agent_region})."
+    }
+  }
 }
 
 # =============================================================================

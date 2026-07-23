@@ -48,7 +48,8 @@ healthchecks_ping_url = "" # Optional: healthchecks.io ping URL (Phase 4 dead-ma
 # doc "AWS DevOps Agent"). Off by default — nothing is created until enabled.
 devops_agent_enabled          = false
 devops_agent_region           = "us-west-2" # not us-west-1: DevOps Agent isn't offered there
-devops_agent_idc_instance_arn = ""          # aws sso-admin list-instances → InstanceArn (required when enabled)
+devops_agent_operator_auth_mode = "iam"      # "idc" needs an IdC instance IN devops_agent_region (our org instance is us-west-1 → iam)
+devops_agent_idc_instance_arn   = ""         # only when auth mode is "idc"
 
 # Slack — fill these AFTER the one-time console OAuth registration (step 2 of
 # the rollout); leave empty until then and the Slack wiring is skipped.

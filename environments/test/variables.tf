@@ -117,8 +117,14 @@ variable "devops_agent_region" {
   default     = "us-west-2"
 }
 
+variable "devops_agent_operator_auth_mode" {
+  description = "Operator web app sign-in: \"iam\" (console-launched, 30-min sessions — the working default: our IdC org instance lives in us-west-1, which DevOps Agent doesn't serve, and idc requires same-region IdC) or \"idc\" (Identity Center SSO; needs an IdC instance in devops_agent_region)."
+  type        = string
+  default     = "iam"
+}
+
 variable "devops_agent_idc_instance_arn" {
-  description = "IAM Identity Center instance ARN for operator-app SSO (from `aws sso-admin list-instances`). Required once devops_agent_enabled is true."
+  description = "IAM Identity Center instance ARN (from `aws sso-admin list-instances`). Only used — and required — when devops_agent_operator_auth_mode is \"idc\"; the instance must live in devops_agent_region."
   type        = string
   default     = ""
 }
