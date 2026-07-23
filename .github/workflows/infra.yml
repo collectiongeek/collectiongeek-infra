@@ -50,6 +50,10 @@ jobs:
       # `|| 'false'` matters: an unset Environment var yields "", which is not
       # a valid bool for TF_VAR_devops_agent_enabled. IDs/ARN are secrets per
       # repo convention (public repo); names and the flag are plain vars.
+      # Set these values in ALL THREE Environments (test, production-plan,
+      # production). prod-plan reads `production-plan`; a value set only in
+      # `production` yields an approved plan that silently contains no
+      # DevOps Agent resources.
       TF_VAR_devops_agent_enabled: ${{ vars.DEVOPS_AGENT_ENABLED || 'false' }}
       TF_VAR_devops_agent_idc_instance_arn: ${{ secrets.DEVOPS_AGENT_IDC_INSTANCE_ARN }}
       TF_VAR_devops_agent_slack_service_id: ${{ secrets.DEVOPS_AGENT_SLACK_SERVICE_ID }}
@@ -140,6 +144,10 @@ jobs:
       # `|| 'false'` matters: an unset Environment var yields "", which is not
       # a valid bool for TF_VAR_devops_agent_enabled. IDs/ARN are secrets per
       # repo convention (public repo); names and the flag are plain vars.
+      # Set these values in ALL THREE Environments (test, production-plan,
+      # production). prod-plan reads `production-plan`; a value set only in
+      # `production` yields an approved plan that silently contains no
+      # DevOps Agent resources.
       TF_VAR_devops_agent_enabled: ${{ vars.DEVOPS_AGENT_ENABLED || 'false' }}
       TF_VAR_devops_agent_idc_instance_arn: ${{ secrets.DEVOPS_AGENT_IDC_INSTANCE_ARN }}
       TF_VAR_devops_agent_slack_service_id: ${{ secrets.DEVOPS_AGENT_SLACK_SERVICE_ID }}
@@ -219,6 +227,10 @@ jobs:
       # `|| 'false'` matters: an unset Environment var yields "", which is not
       # a valid bool for TF_VAR_devops_agent_enabled. IDs/ARN are secrets per
       # repo convention (public repo); names and the flag are plain vars.
+      # Set these values in ALL THREE Environments (test, production-plan,
+      # production). prod-plan reads `production-plan`; a value set only in
+      # `production` yields an approved plan that silently contains no
+      # DevOps Agent resources.
       TF_VAR_devops_agent_enabled: ${{ vars.DEVOPS_AGENT_ENABLED || 'false' }}
       TF_VAR_devops_agent_idc_instance_arn: ${{ secrets.DEVOPS_AGENT_IDC_INSTANCE_ARN }}
       TF_VAR_devops_agent_slack_service_id: ${{ secrets.DEVOPS_AGENT_SLACK_SERVICE_ID }}

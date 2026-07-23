@@ -102,6 +102,14 @@ resource "aws_iam_role_policy" "agent_space_slr" {
 # be reasoned about — and revoked — independently. Extra sts:TagSession is
 # how the service stamps the session with the AgentSpaceId principal tag that
 # the managed policy's conditions key off.
+#
+# The second statement is IdC-specific (userguide: "Migrating from public
+# preview to GA", step 3): with Identity Center auth, the service uses
+# trusted identity propagation to carry WHO the signed-in human is into the
+# role session, and that needs sts:SetContext. The extra conditions pin it
+# down: only the Identity Center context provider may be attached
+# (ForAllValues:ArnEquals), and — because ForAllValues also matches an empty
+# set — the Null check requires a provider to actually be present.
 resource "aws_iam_role" "operator_app" {
   name = "DevOpsAgentRole-Operator-${var.environment}"
 
@@ -118,6 +126,22 @@ resource "aws_iam_role" "operator_app" {
             "aws:SourceArn" = "arn:aws:aidevops:${var.agent_region}:${local.account_id}:agentspace/*"
           }
         }
+      },
+      {
+        Sid       = "TrustedIdentityPropagation"
+        Effect    = "Allow"
+        Principal = { Service = "aidevops.amazonaws.com" }
+        Action    = "sts:SetContext"
+        Condition = {
+          StringEquals = { "aws:SourceAccount" = local.account_id }
+          ArnLike = {
+            "aws:SourceArn" = "arn:aws:aidevops:${var.agent_region}:${local.account_id}:agentspace/*"
+          }
+          "ForAllValues:ArnEquals" = {
+            "sts:RequestContextProviders" = ["arn:aws:iam::aws:contextProvider/IdentityCenter"]
+          }
+          Null = { "sts:RequestContextProviders" = "false" }
+        }
       }
     ]
   })
@@ -129,6 +153,37 @@ resource "aws_iam_role" "operator_app" {
 resource "aws_iam_role_policy_attachment" "operator_app_managed" {
   role       = aws_iam_role.operator_app.name
   policy_arn = "arn:aws:iam::aws:policy/AIDevOpsOperatorAppAccessPolicy"
+}
+
+# IdC lookups the managed policy does NOT cover (same GA-migration doc as the
+# trust statement above): resolving the Identity Center instance and looking
+# up the signed-in user. sso:*Instance* has no resource-level scoping, hence
+# "*"; identitystore is pinned to this account's stores. Without this, IdC
+# sign-in to the operator app fails even though the space creates fine.
+resource "aws_iam_role_policy" "operator_app_idc" {
+  name = "AllowIdentityCenterLookups"
+  role = aws_iam_role.operator_app.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid      = "AllowDevOpsAgentSSOAccess"
+        Effect   = "Allow"
+        Action   = ["sso:ListInstances", "sso:DescribeInstance"]
+        Resource = "*"
+      },
+      {
+        Sid    = "AllowDevOpsAgentIDCUserAccess"
+        Effect = "Allow"
+        Action = "identitystore:DescribeUser"
+        Resource = [
+          "arn:aws:identitystore::${local.account_id}:identitystore/*",
+          "arn:aws:identitystore:::user/*",
+        ]
+      },
+    ]
+  })
 }
 
 # =============================================================================
@@ -145,12 +200,15 @@ resource "time_sleep" "iam_propagation" {
     aws_iam_role_policy_attachment.agent_space_managed,
     aws_iam_role_policy.agent_space_slr,
     aws_iam_role_policy_attachment.operator_app_managed,
+    aws_iam_role_policy.operator_app_idc,
   ]
 }
 
 resource "awscc_devopsagent_agent_space" "this" {
-  name        = var.agent_space_name
-  description = var.agent_space_description
+  name = var.agent_space_name
+  # description is optional but, when sent, must be 1–1000 chars — an empty
+  # string fails API validation, so omit it (null) instead.
+  description = var.agent_space_description != "" ? var.agent_space_description : null
   kms_key_arn = var.kms_key_arn
 
   # Operator app auth = IAM Identity Center: log in to the web app with the
@@ -215,8 +273,10 @@ resource "awscc_devopsagent_association" "slack" {
 
   lifecycle {
     precondition {
-      condition     = var.slack_workspace_id != "" && var.slack_oncall_channel_id != ""
-      error_message = "slack_service_id is set, so slack_workspace_id and slack_oncall_channel_id must be set too (all three come out of the console registration step)."
+      # workspace_id AND workspace_name: both are required fields of the
+      # API's SlackConfiguration, not just the ID.
+      condition     = var.slack_workspace_id != "" && var.slack_workspace_name != "" && var.slack_oncall_channel_id != ""
+      error_message = "slack_service_id is set, so slack_workspace_id, slack_workspace_name and slack_oncall_channel_id must be set too (all of them come out of the console registration step)."
     }
   }
 }
