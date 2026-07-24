@@ -175,3 +175,53 @@ resource "aws_secretsmanager_secret_version" "argocd_oidc" {
   secret_string_wo         = jsonencode({ client-secret = var.argocd_oidc_client_secret })
   secret_string_wo_version = 1
 }
+
+# --- DevOps Agent event-channel webhook: OPTIONAL (DevOps Agent Alertmanager doc) ---
+# Minted ONCE per account via `aws devops-agent register-service` +
+# `associate-service` — the associate-service response is the ONLY place the
+# HMAC secret ever appears (neither the API nor the awscc provider can read
+# it back, which is also why that step is a CLI runbook step and not tofu).
+# Alertmanager can't compute HMAC headers itself, so the in-cluster forwarder
+# (gitops: devops-agent-forwarder) reads this secret via ESO and signs each
+# incident POST. Both halves are capability credentials — anyone holding them
+# can start (paid) investigations in the agent space — so same write-only
+# handling as the Slack webhook above.
+
+variable "devops_agent_webhook_url" {
+  description = "DevOps Agent event-channel webhook URL (optional; from associate-service)."
+  type        = string
+  sensitive   = true
+  default     = "" # empty = not wired yet; the secret below isn't created
+}
+
+variable "devops_agent_webhook_secret" {
+  description = "HMAC signing secret for the DevOps Agent event-channel webhook (optional; shown once by associate-service)."
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+locals {
+  # Same declassification story as slack_enabled. BOTH halves must be present:
+  # a URL without its signing secret (or vice versa) can only ever produce
+  # rejected posts, so half-configured input fails fast at plan time instead.
+  devops_agent_webhook_enabled = nonsensitive(
+    var.devops_agent_webhook_url != "" && var.devops_agent_webhook_secret != ""
+  )
+}
+
+resource "aws_secretsmanager_secret" "devops_agent_webhook" {
+  count      = local.devops_agent_webhook_enabled ? 1 : 0
+  name       = "observability/devops-agent-webhook"
+  kms_key_id = aws_kms_key.secrets.arn
+}
+
+resource "aws_secretsmanager_secret_version" "devops_agent_webhook" {
+  count     = local.devops_agent_webhook_enabled ? 1 : 0
+  secret_id = aws_secretsmanager_secret.devops_agent_webhook[0].id
+  secret_string_wo = jsonencode({
+    url    = var.devops_agent_webhook_url
+    secret = var.devops_agent_webhook_secret
+  })
+  secret_string_wo_version = 1
+}

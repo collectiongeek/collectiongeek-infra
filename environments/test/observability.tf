@@ -9,4 +9,7 @@ module "observability" {
 
   grafana_oidc_client_secret = var.grafana_oidc_client_secret
   argocd_oidc_client_secret  = var.argocd_oidc_client_secret
+
+  devops_agent_webhook_url    = var.devops_agent_webhook_url
+  devops_agent_webhook_secret = var.devops_agent_webhook_secret
 }
