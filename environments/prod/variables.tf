@@ -100,6 +100,20 @@ variable "argocd_oidc_client_secret" {
   sensitive   = true
 }
 
+variable "devops_agent_webhook_url" {
+  description = "DevOps Agent event-channel webhook URL (optional; DevOps Agent Alertmanager doc §A.4)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "devops_agent_webhook_secret" {
+  description = "HMAC signing secret for the DevOps Agent event-channel webhook (optional; shown once by associate-service — DevOps Agent Alertmanager doc §A.4)."
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
 # -----------------------------------------------------------------------------
 # AWS DevOps Agent (devops-agent.tf). All values arrive via GitHub Environment
 # vars/secrets in CI (TF_VAR_*) or terraform.tfvars on a laptop.

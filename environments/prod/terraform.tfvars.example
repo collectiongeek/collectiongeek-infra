@@ -43,6 +43,8 @@ slack_webhook_url = ""
 # Observability
 observability_slack_webhook_url = "" # Optional: Grafana/Alertmanager alerts. NOT the Argo CD webhook above.
 healthchecks_ping_url = "" # Optional: healthchecks.io ping URL (Phase 4 dead-man's switch).
+devops_agent_webhook_url    = "" # Optional: DevOps Agent event-channel webhook (Alertmanager forwarder).
+devops_agent_webhook_secret = "" # Optional: its HMAC secret — both come from `associate-service`, shown once.
 
 # AWS DevOps Agent (see devops-agent.tf; rollout steps in the Observability
 # doc "AWS DevOps Agent"). Off by default — nothing is created until enabled.

@@ -52,6 +52,10 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }} # Argo CD notifications
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }} # Alertmanager
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }} # dead-man's switch (Phase 4)
+      # DevOps Agent event-channel webhook (Alertmanager forwarder). Shown once
+      # by associate-service; per-account values, so set in ALL THREE Environments.
+      TF_VAR_devops_agent_webhook_url: ${{ secrets.DEVOPS_AGENT_WEBHOOK_URL }}
+      TF_VAR_devops_agent_webhook_secret: ${{ secrets.DEVOPS_AGENT_WEBHOOK_SECRET }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
       TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
       # ---- AWS DevOps Agent (module off until DEVOPS_AGENT_ENABLED var = "true") ----
@@ -146,6 +150,8 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }}
+      TF_VAR_devops_agent_webhook_url: ${{ secrets.DEVOPS_AGENT_WEBHOOK_URL }}
+      TF_VAR_devops_agent_webhook_secret: ${{ secrets.DEVOPS_AGENT_WEBHOOK_SECRET }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
       TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
       # ---- AWS DevOps Agent (module off until DEVOPS_AGENT_ENABLED var = "true") ----
@@ -229,6 +235,8 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }}
+      TF_VAR_devops_agent_webhook_url: ${{ secrets.DEVOPS_AGENT_WEBHOOK_URL }}
+      TF_VAR_devops_agent_webhook_secret: ${{ secrets.DEVOPS_AGENT_WEBHOOK_SECRET }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
       TF_VAR_argocd_oidc_client_secret: ${{ secrets.ARGOCD_OIDC_CLIENT_SECRET }} # Portal SSO
       # ---- AWS DevOps Agent (module off until DEVOPS_AGENT_ENABLED var = "true") ----
