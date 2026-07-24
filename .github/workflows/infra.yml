@@ -150,6 +150,11 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }}
+      # DevOps Agent event-channel webhook (Alertmanager forwarder). CAUTION:
+      # this job plans from Environment `production-plan` and the apply job
+      # executes THAT plan — an empty pair here shows up as a DESTROY of the
+      # existing observability/devops-agent-webhook secret. Keep the pair set
+      # (and identical) in production-plan AND production.
       TF_VAR_devops_agent_webhook_url: ${{ secrets.DEVOPS_AGENT_WEBHOOK_URL }}
       TF_VAR_devops_agent_webhook_secret: ${{ secrets.DEVOPS_AGENT_WEBHOOK_SECRET }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
@@ -235,6 +240,8 @@ jobs:
       TF_VAR_slack_webhook_url: ${{ secrets.ARGOCD_SLACK_WEBHOOK_URL }}
       TF_VAR_observability_slack_webhook_url: ${{ secrets.OBSERVABILITY_SLACK_WEBHOOK_URL }}
       TF_VAR_healthchecks_ping_url: ${{ secrets.HEALTHCHECKS_PING_URL }}
+      # DevOps Agent event-channel webhook — same pair as production-plan (the
+      # plan artifact is what's applied; keep both Environments in sync).
       TF_VAR_devops_agent_webhook_url: ${{ secrets.DEVOPS_AGENT_WEBHOOK_URL }}
       TF_VAR_devops_agent_webhook_secret: ${{ secrets.DEVOPS_AGENT_WEBHOOK_SECRET }}
       TF_VAR_grafana_oidc_client_secret: ${{ secrets.GRAFANA_OIDC_CLIENT_SECRET }} # Portal SSO
