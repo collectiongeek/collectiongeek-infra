@@ -72,7 +72,7 @@ jobs:
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Token isn't needed after checkout — Terraform doesn't shell out
           # to git, and no later step pushes/fetches. Dropping it shrinks
@@ -166,7 +166,7 @@ jobs:
     steps:
       # Actions pinned to commit SHAs (not @vN tags) so a re-tagged upstream
       # can't change apply behavior under us. Dependabot opens PRs to bump.
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Token isn't needed after checkout — Terraform doesn't shell out
           # to git, and no later step pushes/fetches. Dropping it shrinks
@@ -247,7 +247,7 @@ jobs:
       TF_VAR_devops_agent_slack_channel_id: ${{ secrets.DEVOPS_AGENT_SLACK_CHANNEL_ID }}
       TF_VAR_devops_agent_slack_channel_name: ${{ vars.DEVOPS_AGENT_SLACK_CHANNEL_NAME }}
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
       # Same-run download: no extra token permissions needed. Lands the file in
