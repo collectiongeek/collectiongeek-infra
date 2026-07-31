@@ -236,9 +236,10 @@ resource "aws_iam_role_policy" "state_access" {
 # =============================================================================
 
 # This role is assumed by external-dns running in the Test and Prod clusters
-# via IRSA (IAM Roles for Service Accounts). The trust policy will be updated
-# in later phases to include the OIDC provider ARNs from each EKS cluster.
-# For now, we allow account-level trust.
+# via IRSA (IAM Roles for Service Accounts) through a two-hop chain: IRSA
+# grants the pod an in-account role, which then assumes this one. Account-level
+# trust here is deliberate and sufficient — the per-cluster OIDC scoping
+# happens on the first hop, in each cluster's own account.
 
 resource "aws_iam_role" "dns_manager" {
   name = "route53-dns-manager"

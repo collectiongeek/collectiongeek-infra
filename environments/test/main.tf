@@ -70,8 +70,8 @@ module "karpenter" {
   private_subnet_ids        = module.vpc.private_subnet_ids
   cluster_security_group_id = module.eks.cluster_security_group_id
 
-  # Pin chart version per-environment so this bump stays isolated to test.
-  # (The module default still serves prod — do not change it there.)
+  # Pinned explicitly per environment so module-default changes never move
+  # either env implicitly (prod pins its own version in environments/prod).
   karpenter_version = "1.12.1"
 
   # Test has a single system node, and Karpenter runs only on system nodes
@@ -174,8 +174,9 @@ module "argocd" {
   # admin password login.
   local_admin_enabled = false
 
-  # Pin chart version per-environment so this major bump (7.x -> 9.x, i.e.
-  # Argo CD 2.x -> 3.x) stays isolated to test. Prod keeps the module default.
+  # Pinned explicitly per environment so module-default changes never move
+  # either env implicitly (prod pins its own version too; the module default
+  # is vestigial — neither environment uses it).
   # NOTE: crosses two chart majors — review the 2.14->3.0 upgrade notes and
   # back up Applications before applying. See modules/argocd/main.tf for the
   # `server.insecure` param change required by chart 8.x+.
