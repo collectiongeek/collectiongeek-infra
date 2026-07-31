@@ -26,10 +26,14 @@ OpenTofu infrastructure code for provisioning AWS resources across three account
 
 ## Structure
 modules/                 # Reusable OpenTofu modules
-├── vpc/                 # VPC, subnets, NAT gateway
-├── eks/                 # EKS cluster, OIDC provider
+├── vpc/                 # VPC, subnets, NAT gateway, S3 gateway endpoint
+├── eks/                 # EKS cluster, OIDC provider, EBS CSI addon
 ├── karpenter/           # Karpenter controller + NodePool
-└── cluster-addons/      # Ingress, cert-manager, external-dns, Argo CD
+├── cluster-addons/      # Ingress, cert-manager, external-dns, external-secrets
+├── argocd/              # Argo CD (helm), WorkOS OIDC, RBAC
+├── observability/       # S3 buckets, IRSA roles, Secrets Manager entries
+├── github-oidc/         # GitHub Actions OIDC provider + CI role
+└── devops-agent/        # AWS DevOps Agent space + roles (us-west-2)
 environments/            # Per-account configurations
 ├── shared-services/     # S3 state backend, DynamoDB, Route 53
 ├── test/                # Test cluster infrastructure
@@ -45,7 +49,7 @@ Always apply in this order:
 
 ```bash
 cd environments/test
-tofu init
+tofu init -backend-config=backend.hcl   # test/prod: backend.tf is deliberately partial
 tofu plan
 tofu apply
 ```
